@@ -20,13 +20,22 @@ I'm excited to introduce **Shroudtopia**, a mod that brings creative mode functi
 
 ## Installation
 
-1. **Download:** Get the source code from git.
-2. **Setup:** Build 'winmm' solution and drop 'winmm.dll' into your Enshrouded dedicated server folder.
+1. **Download:** Get latest binaries from release section.
+2. **Setup:** Drop the DLL files into your Enshrouded dedicated server folder.
 3. **Launch:** Start the server - a default config is generated if `shroudtopia.json` is absent.
+
+If Shroudtopia is loaded you should see something like this in the server console:
+```
+[shroudtopia] Shroudtopia initialized. Starting thread...
+[shroudtopia] Thread started.
+[shroudtopia] Loading config from 'shroudtopia.json'...
+[shroudtopia] Config loaded.
+[shroudtopia] Wait for server. Configured boot delay is 1000ms.
+```
 
 ## Customization
 
-Each aspect of Shroudtopia is highly customizable via the `shroudtopia.json` config file. Adjust settings to tailor the mod to your preferred gameplay style:
+Each aspect of Shroudtopia is customizable via the `shroudtopia.json` config file. Adjust settings to tailor the mod to your preferred gameplay style:
 
 ```json
 {
@@ -49,3 +58,9 @@ This project is licensed under the [MIT License](#).
 <hr />
 
 Let's make Enshrouded even more exciting with **Shroudtopia**! 🌟
+
+Special thanks to the following folks. Their work gave me a headstart implementing most features:
+
+- cfe
+- Turk
+- Atamg
