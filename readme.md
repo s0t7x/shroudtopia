@@ -20,8 +20,8 @@ I'm excited to introduce **Shroudtopia**, a mod that brings creative mode functi
 
 ## Installation
 
-1. **Download:** Get latest binaries from release section.
-2. **Setup:** Drop the DLL files into your Enshrouded dedicated server folder.
+1. **Download:** Get latest binaries from [release section](https://github.com/s0t7x/shroudtopia/releases).
+2. **Setup:** Extract the files into your Enshrouded dedicated server folder.
 3. **Launch:** Start the server - a default config is generated if `shroudtopia.json` is absent.
 
 If Shroudtopia is loaded you should see something like this in the server console:
@@ -53,7 +53,7 @@ Each aspect of Shroudtopia is customizable via the `shroudtopia.json` config fil
 Contributions are welcome! Feel free to fork the repository, make improvements, and submit pull requests.
 
 ## License
-This project is licensed under the [MIT License](#).
+This project is licensed under the [MIT License](https://github.com/s0t7x/shroudtopia/blob/0.1-stable/LICENSE).
 
 <hr />
 
