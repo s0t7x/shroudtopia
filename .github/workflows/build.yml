@@ -21,7 +21,7 @@ jobs:
     - name: compress binaries
       run: |
         Compress-Archive -Path *.exe -Destination Shroudtopia.zip
-      shell: cmd
+      shell: powershell
     - name: upload executable
       uses: actions/upload-artifact@v2
       with:
