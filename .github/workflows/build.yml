@@ -19,17 +19,14 @@ jobs:
         MSBuild "winmm\winmm.sln" /t:Build /p:Configuration=Release /p:OutDir="." /p:Platform=x64
       shell: cmd
     - name: compress
-      if: steps.build_proxy.outcome == 'success' && steps.build_core.outcome == 'success'
       run: |
         Compress-Archive -Path *.exe -Destination .\Shroudtopia.zip
       shell: powershell
     - name: check
-      if: steps.compress.outcome == 'success'
       run: |
         dir
       shell: cmd
     - name: upload
-      if: steps.compress.outcome == 'success'
       uses: actions/upload-artifact@v2
       with:
         name: windows
