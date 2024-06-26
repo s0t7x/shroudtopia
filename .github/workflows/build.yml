@@ -18,17 +18,15 @@ jobs:
       run: |
         MSBuild "winmm\winmm.sln" /t:Build /p:Configuration=Release /p:OutDir="." /p:Platform=x64
       shell: cmd
-    - name: compress
-      run: |
-        Compress-Archive -Path *.exe -Destination C:\Shroudtopia.zip
-      shell: powershell
-    - name: check
-      run: |
-        dir
-      shell: cmd
-    - name: upload
+    - name: upload_core
       uses: actions/upload-artifact@v2
       with:
         name: windows
         path: |
-          C:\Shroudtopia.zip
+          shroudtopia.dll
+    - name: upload_proxy
+      uses: actions/upload-artifact@v2
+      with:
+        name: windows
+        path: |
+          winmm.dll
