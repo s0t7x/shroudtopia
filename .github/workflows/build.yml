@@ -23,4 +23,4 @@ jobs:
       with:
         name: win_x64
         path: |
-          ${{ github.workspace }}/build/
+          ${{ github.workspace }}/build/*.exe
