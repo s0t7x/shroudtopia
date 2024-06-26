@@ -10,23 +10,26 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - uses: ilammy/msvc-dev-cmd@v1.4.1
-    - name: compile core dll
+    - name: build_core
       run: |
-        MSBuild "shroudtopia\shroudtopia.sln" /t:Build /p:Configuration=Release /p:OutDir=".\" /p:Platform=x64
+        MSBuild "shroudtopia\shroudtopia.sln" /t:Build /p:Configuration=Release /p:OutDir="." /p:Platform=x64
       shell: cmd
-    - name: compile proxy 'winmm.dll'
+    - name: build_proxy
       run: |
-        MSBuild "winmm\winmm.sln" /t:Build /p:Configuration=Release /p:OutDir=".\" /p:Platform=x64
+        MSBuild "winmm\winmm.sln" /t:Build /p:Configuration=Release /p:OutDir="." /p:Platform=x64
       shell: cmd
-    - name: compress binaries
+    - name: compress
+      if: steps.build_proxy.outcome == 'success' && steps.build_core.outcome == 'success'
       run: |
         Compress-Archive -Path *.exe -Destination .\Shroudtopia.zip
       shell: powershell
     - name: check
+      if: steps.compress.outcome == 'success'
       run: |
         dir
       shell: cmd
-    - name: upload executable
+    - name: upload
+      if: steps.compress.outcome == 'success'
       uses: actions/upload-artifact@v2
       with:
         name: windows
