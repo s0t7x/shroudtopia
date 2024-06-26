@@ -20,7 +20,7 @@ jobs:
       shell: cmd
     - name: compress
       run: |
-        Compress-Archive -Path *.exe -Destination .\Shroudtopia.zip
+        Compress-Archive -Path *.exe -Destination C:\Shroudtopia.zip
       shell: powershell
     - name: check
       run: |
@@ -31,4 +31,4 @@ jobs:
       with:
         name: windows
         path: |
-          Shroudtopia.zip
+          C:\Shroudtopia.zip
