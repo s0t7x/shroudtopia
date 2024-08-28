@@ -1,10 +1,13 @@
-<center>
 
-<h1>Shroudtopia</h1>
+<h1><p align="center">
+Shroudtopia
+</p></h1>
+<p align="center">
 <b>Creative Mode Mod for Enshrouded Dedicated Servers</b>
-
-</center>
-<hr/>
+</p>
+<p align="center">
+<img alt="Static Badge" src="https://img.shields.io/badge/Game%20Version%20(SVN)-555489-blue">
+</p>
 
 I'm excited to introduce **Shroudtopia**, a mod that brings creative mode functionalities to Enshrouded dedicated servers. Whether you're a builder looking for unlimited resources or an explorer seeking freedom from limitations, Shroudtopia enhances your gameplay experience.
 
