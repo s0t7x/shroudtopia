@@ -339,11 +339,6 @@ namespace Mem
 
         bool activate()
         {
-            auto oss = std::ostringstream() << "Shellcode: " << std::hex << "0x" << shellcode->data->address << "\n";
-            oss << "Patch: " << std::hex << "0x" << patch->data->address << "\n";
-            std::string logMessage = oss.str();
-            LOG_CLASS(logMessage.c_str());
-
             if (!active && shellcode && patch)
                 return shellcode->inject() && patch->apply() && (active = true);
             return false;

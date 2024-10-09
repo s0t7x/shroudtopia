@@ -19,12 +19,12 @@ json config = {
     {"active", true},
     {"boot_delay", 3000},
     {"update_delay", 500},
-    {"bypass_altar_limit", true},
-    {"glider_flight", true},
-    {"infinite_item_use", true},
-    {"no_craft_cost", true},
-    {"no_fall_damage", true},
-    {"no_stamina_loss", true}
+    {"bypass_altar_limit", false},
+    {"glider_flight", false},
+    {"infinite_item_use", false},
+    {"no_craft_cost", false},
+    {"no_fall_damage", false},
+    {"no_stamina_loss", false}
 };
 
 #define CONFIG_FILE "shroudtopia.json"
@@ -88,13 +88,12 @@ void UpdateConfigFromUI() {
     config["update_delay"] = std::stoi(buffer);
 
     // Boolean checkboxes
-    config["active"] = (SendMessage(hCheckboxes[0], BM_GETCHECK, 0, 0) == BST_CHECKED);
-    config["bypass_altar_limit"] = (SendMessage(hCheckboxes[1], BM_GETCHECK, 0, 0) == BST_CHECKED);
-    config["glider_flight"] = (SendMessage(hCheckboxes[2], BM_GETCHECK, 0, 0) == BST_CHECKED);
-    config["infinite_item_use"] = (SendMessage(hCheckboxes[3], BM_GETCHECK, 0, 0) == BST_CHECKED);
-    config["no_craft_cost"] = (SendMessage(hCheckboxes[4], BM_GETCHECK, 0, 0) == BST_CHECKED);
-    config["no_fall_damage"] = (SendMessage(hCheckboxes[5], BM_GETCHECK, 0, 0) == BST_CHECKED);
-    config["no_stamina_loss"] = (SendMessage(hCheckboxes[6], BM_GETCHECK, 0, 0) == BST_CHECKED);
+    config["bypass_altar_limit"] = (SendMessage(hCheckboxes[0], BM_GETCHECK, 0, 0) == BST_CHECKED);
+    config["glider_flight"] = (SendMessage(hCheckboxes[1], BM_GETCHECK, 0, 0) == BST_CHECKED);
+    config["infinite_item_use"] = (SendMessage(hCheckboxes[2], BM_GETCHECK, 0, 0) == BST_CHECKED);
+    config["no_craft_cost"] = (SendMessage(hCheckboxes[3], BM_GETCHECK, 0, 0) == BST_CHECKED);
+    config["no_fall_damage"] = (SendMessage(hCheckboxes[4], BM_GETCHECK, 0, 0) == BST_CHECKED);
+    config["no_stamina_loss"] = (SendMessage(hCheckboxes[5], BM_GETCHECK, 0, 0) == BST_CHECKED);
 }
 
 // Function to handle file loading
@@ -290,10 +289,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     switch (message)
     {
     case WM_CREATE: {
-        HICON hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDC_MYICON));
-        SendMessage(hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-        SendMessage(hWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
-
         // Create edit controls for boot and update delay
         CreateWindow("STATIC", "Boot Delay (ms):", WS_VISIBLE | WS_CHILD, 10, 10, 150, 20, hWnd, NULL, NULL, NULL);
         hBootDelayEdit = CreateWindow("EDIT", "", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_NUMBER, 170, 10, 100, 20, hWnd, NULL, NULL, NULL);
@@ -310,6 +305,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         hCheckboxes[5] = CreateWindow("BUTTON", "No Stamina Loss", WS_VISIBLE | WS_CHILD | BS_CHECKBOX, 10, 220, 200, 20, hWnd, (HMENU)(IDC_CHECKBOX_START + 5), NULL, NULL);
 
         // Initialize UI with current config values
+        LoadConfig(CONFIG_FILE);
         UpdateUIFromConfig();
 
         SetTimer(hWnd, 1, 500, NULL); // Set timer to 0.5 seconds
