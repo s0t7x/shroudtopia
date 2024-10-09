@@ -5,6 +5,8 @@
 #include <iomanip>
 #define LOG_FILE "shroudtopia.log"
 
+#define LOG_CLASS(msg) Utils::Log(typeid(*this).name(), msg)
+
 namespace Utils
 {
     void Log(const char *szInput)
@@ -13,6 +15,14 @@ namespace Utils
         log << szInput;
         log << "\n";
         std::cout << "[shroudtopia] " << szInput << std::endl;
+    }
+
+    void Log(const char* className, const char* szInput)
+    {
+        std::ofstream log(LOG_FILE, std::ios_base::app | std::ios_base::out);
+        log << "[shroudtopia]" << "[" << className << "] " << szInput;
+        log << "\n";
+        std::cout << "[shroudtopia]" << "[" << className << "] " << szInput << std::endl;
     }
 
     void PrintMemory(uintptr_t address, uint8_t* buffer, size_t size)

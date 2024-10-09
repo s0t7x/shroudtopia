@@ -2,107 +2,40 @@
 #include "pch.h"
 #include "mem.h"
 #include <thread>
+#include <sstream>
+#include <iomanip>
 
-class ExpMultiplier
-{
+// Signatures for GameVersion (SVN) 558123
+
+class Mod {
 public:
+    virtual ~Mod() {}  // Add a virtual destructor to enable polymorphism
+
     bool active = false;
-
-    Mem::Detour *expMultiplierMod = nullptr;
-
-    ExpMultiplier(int multiplier = 1)
-    {
-        const char *pattern = "\x48\x03\xC3\x01\x34\x88\x48\x8B";
-        const char *mask = "xxxxxxxx";
-
-        uintptr_t baseAddress = (uintptr_t)GetModuleHandle(NULL);
-        uintptr_t address = Mem::FindPattern(pattern, mask, baseAddress, 0x1000000); // Scan 16MB
-
-        if (address)
-        {
-            uint8_t modCode[] = {
-                0x0F, 0xAF, 0x35, 0x00, 0x00, 0x00, 0x00, // imul esi, [multipler_exp]
-                0x48, 0x03, 0xC3,                         // add rax, rbx
-                0x01, 0x34, 0x88,                         // add [rax+rcx*4], esi
-                0xE9, 0x00, 0x00, 0x00, 0x00,             // jmp return
-                0x00, 0x00, 0x00, 0x00
-            };
-            expMultiplierMod = new Mem::Detour(address, modCode, sizeof(modCode), false, 1);
-            expMultiplierMod->shellcode->updateValue<uint32_t>(3, 11);
-            expMultiplierMod->shellcode->updateValue<uint32_t>(14, (uint32_t)(expMultiplierMod->patch->data->address + expMultiplierMod->patch->data->size) - ((uint32_t)((uintptr_t)expMultiplierMod->shellcode->data->address + expMultiplierMod->shellcode->data->size - 4)));
-            expMultiplierMod->shellcode->updateValue<uint32_t>(18, multiplier);
-        }
-    }
+    Mem::Detour* mod = nullptr;
 
     void activate()
     {
-        expMultiplierMod->activate();
-        active = expMultiplierMod->active;
+        mod->activate();
+        active = mod->active;
         if (active)
-            Utils::Log("Activated ExpMultiplier");
+            LOG_CLASS("Activated");
         else
-            Utils::Log("Failed to activate ExpMultiplier");
+            LOG_CLASS("Failed to activate");
+    }
+
+    // Deactivates the mod by restoring the original code.
+    void deactivate()
+    {
+        mod->deactivate();
+        active = false;
+        LOG_CLASS("Deactivated");
     }
 };
 
-bool ApplyExpMultiplier(const Config &config)
-{
-    const char *pattern = "\x48\x03\xC3\x01\x34\x88\x48\x8B";
-    const char *mask = "xxxxxxxx";
-
-    uintptr_t baseAddress = (uintptr_t)GetModuleHandle(NULL);
-
-    uintptr_t address = Mem::FindPattern(pattern, mask, baseAddress, 0x1000000);
-
-    if (address)
-    {
-        void *newmem = (void *)Mem::AllocateMemoryNearAddress((LPVOID)address, 0x1000);
-
-        if (newmem)
-        {
-            uint8_t newCode[] = {
-                0x0F, 0xAF, 0x35, 0x00, 0x00, 0x00, 0x00, // imul esi, [multipler_exp]
-                0x48, 0x03, 0xC3,                         // add rax, rbx
-                0x01, 0x34, 0x88,                         // add [rax+rcx*4], esi
-                0xE9, 0x00, 0x00, 0x00, 0x00              // jmp return
-            };
-
-            uint8_t patch[] = {
-                0xE9, 0x00, 0x00, 0x00, 0x00, // jmp newmem
-                0x90                          // nop
-            };
-
-            uintptr_t multDataAddress = (uintptr_t)newmem + sizeof(newCode);
-
-            *(int32_t *)(newCode + 3) = (int32_t)(multDataAddress - ((uintptr_t)newmem + 7)); // Offset to multipler_exp
-
-            *(int32_t *)(newCode + 14) = (int32_t)((address + sizeof(patch)) - ((uintptr_t)newmem + sizeof(newCode)));
-
-            int expMultiplier = config.exp_multiplier;
-            memcpy((void *)multDataAddress, &config.exp_multiplier, sizeof(int));
-
-            memcpy(newmem, newCode, sizeof(newCode));
-
-            *(int32_t *)(patch + 1) = (uintptr_t)newmem - (address + 5);
-
-            Mem::Write(address, patch, sizeof(patch));
-
-            Utils::Log(std::string("Exp multiplier set to: ").append(std::to_string(config.exp_multiplier)).c_str());
-            return true;
-        }
-    }
-
-    Utils::Log("Failed to set exp multiplier");
-    return false;
-}
-
-class GliderFlight
+class GliderFlight : public Mod
 {
 public:
-    bool active = false;
-
-    Mem::Detour *flightMod = nullptr;
-
     GliderFlight()
     {
         const char *pattern = "\xF3\x0F\x10\x05\x00\x00\x00\x00\x77";
@@ -117,237 +50,309 @@ public:
                 0xF3, 0x0F, 0x10, 0x05, 0x05, 0x00, 0x00, 0x00, // movss xmm0, [GlideData]
                 0xE9, 0x00, 0x00, 0x00, 0x00,
                 0xc3, 0xf5, 0xc8, 0xbf};
-            flightMod = new Mem::Detour(address, modCode, sizeof(modCode), false, 3);
-            flightMod->shellcode->updateValue<uint32_t>(9, (uint32_t)(flightMod->patch->data->address + flightMod->patch->data->size) - ((uint32_t)((uintptr_t)flightMod->shellcode->data->address + flightMod->shellcode->data->size - 4)));
+            mod = new Mem::Detour(address, modCode, sizeof(modCode), false, 3);
+            mod->shellcode->updateValue<uint32_t>(9, (uint32_t)(mod->patch->data->address + mod->patch->data->size) - ((uint32_t)((uintptr_t)mod->shellcode->data->address + mod->shellcode->data->size - 4)));
         }
-    }
-
-    void activate()
-    {
-        flightMod->activate();
-        active = flightMod->active;
-        if (active)
-            Utils::Log("Activated GliderFlight");
-        else
-            Utils::Log("Failed to activate GliderFlight");
     }
 };
 
-bool ApplyNoStaminaLoss(const Config &config)
+class NoStaminaLoss : public Mod
 {
-    if (!config.no_stamina_loss)
-        return true;
-
-    const char *pattern = "\x8B\x04\x81\x89\x44\x24\x3C";
-    const char *mask = "xxxxxxx";
-
-    uintptr_t baseAddress = (uintptr_t)GetModuleHandle(NULL);
-    uintptr_t address = Mem::FindPattern(pattern, mask, baseAddress, 0x1000000);
-
-    if (address)
+public:
+    NoStaminaLoss()
     {
-        void *newmem = (void *)Mem::AllocateMemoryNearAddress((LPVOID)address, 0x1000);
+        // Pattern matching the AOB scan for the original code in the target process.
+        const char* pattern = "\x8B\x04\x81\x89\x44\x24\x3C";
+        const char* mask = "xxxxxxx";
 
-        if (newmem)
+        // Base address of the module (the game).
+        uintptr_t baseAddress = (uintptr_t)GetModuleHandle(NULL);
+
+        // Find the pattern within the game memory (scans within 16MB).
+        uintptr_t address = Mem::FindPattern(pattern, mask, baseAddress, 0x1000000);
+
+        // If the address was found, proceed with allocating memory and creating the detour.
+        if (address)
         {
-            uint8_t newCode[] = {
-                0x53,                        // push rbx
-                0x8B, 0x5C, 0x81, 0x08,      // mov ebx, [rcx+rax*4+8]
-                0x89, 0x1C, 0x81,            // mov [rcx+rax*4], ebx
-                0x5B,                        // pop rbx
-                0x8B, 0x04, 0x81,            // mov eax, [rcx+rax*4]
-                0x89, 0x44, 0x24, 0x3C,      // mov [rsp+3C], eax
-                0xE9, 0x00, 0x00, 0x00, 0x00 // jmp return
+            // The modded code that will replace the original instructions at the found address.
+            uint8_t modCode[] = {
+                0x53,                               // push rbx
+                0x8B, 0x5C, 0x81, 0x08,             // mov ebx, [rcx+rax*4+8]
+                0x89, 0x1C, 0x81,                   // mov [rcx+rax*4], ebx
+                0x5B,                               // pop rbx
+                0x8B, 0x04, 0x81,                   // mov eax, [rcx+rax*4]
+                0x89, 0x44, 0x24, 0x3C,             // mov [rsp+3C], eax
+                0xE9, 0x00, 0x00, 0x00, 0x00        // jmp return
             };
 
-            uint8_t patch[] = {
-                0xE9, 0x00, 0x00, 0x00, 0x00, // jmp newmem
-                0x66, 0x90                    // nop 2 (x86 nop)
+            // Creating the detour by replacing the original code with our custom modCode.
+            mod = new Mem::Detour(address, modCode, sizeof(modCode), false, 2);
+
+            // Calculate the jump address and update the shellcode.
+            mod->shellcode->updateValue<uint32_t>(
+                sizeof(modCode) - 4, (uint32_t)(mod->patch->data->address + mod->patch->data->size)
+                - ((uint32_t)((uintptr_t)mod->shellcode->data->address
+                    + mod->shellcode->data->size))
+            );
+        }
+    }
+};
+
+class NoFallDamage : public Mod
+{
+public:
+    NoFallDamage()
+    {
+        // Pattern matching the AOB scan for the original code in the target process.
+        const char* pattern = "\x89\x04\x91\x48\x8D\x4D\xE0";
+        const char* mask = "xxxxxxx";
+
+        // Base address of the module (the game).
+        uintptr_t baseAddress = (uintptr_t)GetModuleHandle(NULL);
+
+        uintptr_t address = Mem::FindPattern(pattern, mask, baseAddress, 0x10000000);
+        if (address)
+        {
+            // add fall damage as health
+            //uint8_t modCode[] = {
+            //    0x01, 0x04, 0x91,                    // add[rcx + rdx * 4], eax
+            //    0x48, 0x8D, 0x4D, 0xE0,              // lea rcx, [rbp-20]
+            //    0xE9, 0x00, 0x00, 0x00, 0x00         // jmp return (dynamic, needs to be calculated)
+            //};
+
+            // no fall damage
+            uint8_t modCode[] = {
+                0x48, 0x83, 0xC0, 0x00,              // add eax, 0 (equivalent to no operation)
+                0x48, 0x8D, 0x4D, 0xE0,              // lea rcx, [rbp-20]
+                0xE9, 0x00, 0x00, 0x00, 0x00         // jmp return (dynamic, needs to be calculated)
             };
 
-            int32_t returnAddress = (int32_t)((address + sizeof(patch)) - ((uintptr_t)newmem + sizeof(newCode)));
-            *(int32_t *)(newCode + sizeof(newCode) - 4) = returnAddress;
+            // Creating the detour by replacing the original code with our custom modCode.
+            mod = new Mem::Detour(address, modCode, sizeof(modCode), false, 2);
 
-            memcpy(newmem, newCode, sizeof(newCode));
+            // Calculate the jump address and update the shellcode.
+            mod->shellcode->updateValue<uint32_t>(
+                sizeof(modCode)-4, (uint32_t)(mod->patch->data->address + mod->patch->data->size)
+                - ((uint32_t)((uintptr_t)mod->shellcode->data->address
+                    + mod->shellcode->data->size))
+            );
+        }
+        else
+        {
+            LOG_CLASS(std::string("Address not found: Base Address: ").append(std::to_string(baseAddress)).c_str());
+        }
+    }
+};
 
-            *(int32_t *)(patch + 1) = (int32_t)((uintptr_t)newmem - (address + 5));
-            Mem::Write(address, patch, sizeof(patch));
+class NoCraftCost : public Mod
+{
+public:
+    NoCraftCost()
+    {
+        // Pattern matching the AOB scan for the original code in the target process.
+        const char* pattern = "\x43\x8B\x74\xF5\x04";
+        const char* mask = "xxxxx";
 
-            Utils::Log("Activated NoStaminaLoss");
+        // Base address of the module (the game).
+        uintptr_t baseAddress = (uintptr_t)GetModuleHandle(NULL);
 
-            return true;
+        // Find the pattern within the game memory (scans within 16MB).
+        uintptr_t address = Mem::FindPattern(pattern, mask, baseAddress, 0x1000000);
+
+        // If the address was found, proceed with allocating memory and creating the detour.
+        if (address)
+        {
+            // The modded code that will replace the original instructions at the found address.
+            uint8_t modCode[] = {
+                0x43, 0x8B, 0x74, 0xF5, 0x04, // - mov esi,[r13 + r14 * 8 + 04]
+                0xBE, 0x00, 0x00, 0x00, 0x00, // - mov esi,00000000
+                0xE9, 0x00, 0x00, 0x00, 0x00  // - jmp
+            };
+
+            // Creating the detour by replacing the original code with our custom modCode.
+            mod = new Mem::Detour(address, modCode, sizeof(modCode), false, 0);
+
+            // Calculate the jump address and update the shellcode.
+            mod->shellcode->updateValue<uint32_t>(
+                sizeof(modCode) - 4, (uint32_t)(mod->patch->data->address + mod->patch->data->size)
+                - ((uint32_t)((uintptr_t)mod->shellcode->data->address
+                    + mod->shellcode->data->size))
+            );
+        }
+    }
+};
+
+class InfiniteItemUse : public Mod
+{
+public:
+    Mem::Detour* free_ItemUseMod2 = nullptr;
+
+    InfiniteItemUse()
+    {
+        // AOB patterns for the original code in the target process.
+        const char* pattern1 = "\x45\x29\x7E\x04\x41\x2B\xEF"; // First AOB
+        const char* pattern2 = "\x33\xC9\x49\x89\x0E";        // Second AOB
+
+        // Base address of the module (the game).
+        uintptr_t baseAddress = (uintptr_t)GetModuleHandle(NULL);
+
+        // Find the patterns within the game memory (scans within 16MB).
+        uintptr_t address1 = Mem::FindPattern(pattern1, "xxxxxxx", baseAddress, 0xF0000000);
+        uintptr_t address2 = Mem::FindPattern(pattern2, "xxxxx", baseAddress, 0xF0000000);
+
+        // Check if both addresses were found.
+        if (address1 && address2)
+        {
+            // Allocate memory for new instructions to be injected at address1.
+            uint8_t modCode1[] = {
+                0x49, 0x83, 0xFB, 0x01, 0x0F, 0x85, 0x08, 0x00, 0x00, 0x00, 0x44, 0x29, 0xFD, 0xE9, 0x00, 0x00, 0x00, 0x00
+            };
+
+            // Creating the detour for the first address.
+            mod = new Mem::Detour(address1, modCode1, sizeof(modCode1), false, 2);
+
+            // Calculate the jump address for the first detour.
+            mod->shellcode->updateValue<uint32_t>(
+                sizeof(modCode1)-4, (uint32_t)(mod->patch->data->address + mod->patch->data->size)
+                - ((uint32_t)((uintptr_t)mod->shellcode->data->address
+                    + mod->shellcode->data->size))
+            );
+
+            // Allocate memory for new instructions to be injected at address2.
+            uint8_t modCode2[] = {
+                0x31, 0xC9,              // xor ecx, ecx
+                0x49, 0x83, 0xFB, 0x01,
+                0x0F, 0x84, 0x03, 0x00, 0x00, 0x00,
+                0x49, 0x89, 0x0E,
+                0xE9, 0x00, 0x00, 0x00, 0x00 // jmp
+            };
+
+            // Creating the detour for the second address.
+            free_ItemUseMod2 = new Mem::Detour(address2, modCode2, sizeof(modCode2), false);
+
+            // Calculate the jump address for the second detour.
+            free_ItemUseMod2->shellcode->updateValue<uint32_t>(
+                sizeof(modCode2)-4, (uint32_t)(free_ItemUseMod2->patch->data->address + free_ItemUseMod2->patch->data->size)
+                - ((uint32_t)((uintptr_t)free_ItemUseMod2->shellcode->data->address
+                    + free_ItemUseMod2->shellcode->data->size - 4))
+            );
         }
     }
 
-    Utils::Log("Failed to activate NoStaminaLoss");
-    return false;
-}
-
-bool ApplyNoFallDamage(const Config &config)
-{
-    if (!config.no_fall_damage)
-        return true;
-
-    // \x40\x53\x48\x83\xEC\x60\x41\xB8\x20\x00\x00\x00\x48\x8D\x54\x24\x20\x48\x8B\xD9\xE8\x00\x00\x00\x00\x41\xB8\x20\x00\x00\x00\x48\x8D\x54\x24\x20\x48\x8B\xCB\xE8\x00\x00\x00\x00\x84\xC0\x0F\x84\xD9\x00\x00\x00\x48\x89\x7C\x24\x70
-    // xxxxxxxxxxxxxxxxxxxxx????xxxxxxxxxxxxxxx????xxxxxxxxxxxxx
-    const char *pattern = "\x40\x53\x48\x83\xEC\x60\x41\xB8\x20\x00\x00\x00\x48\x8D\x54\x24\x20\x48\x8B\xD9\xE8\x00\x00\x00\x00\x41\xB8\x20\x00\x00\x00\x48\x8D\x54\x24\x20\x48\x8B\xCB\xE8\x00\x00\x00\x00\x84\xC0\x0F\x84\xD9\x00\x00\x00\x48\x89\x7C\x24\x70";
-    const char *mask = "xxxxxxxxxxxxxxxxxxxxx????xxxxxxxxxxxxxxx????xxxxxxxxxxxxx";
-
-    uintptr_t baseAddress = (uintptr_t)GetModuleHandle(NULL);
-    uintptr_t address = Mem::FindPattern(pattern, mask, baseAddress, 0x1000000);
-
-    if (address)
+    // Activates the Infinite Item Use mod.
+    void activate()
     {
-        uint8_t patch[] = {
-            0xC3};
-
-        Mem::Write(address, patch, sizeof(patch));
-
-        Utils::Log("Activated NoFallDamage");
-
-        return true;
+        mod->activate();
+        free_ItemUseMod2->activate();
+        active = mod->active && free_ItemUseMod2->active;
+        if (active)
+            LOG_CLASS("Activated");
+        else
+            LOG_CLASS("Failed to activate");
     }
 
-    Utils::Log("Failed to activate NoFallDamage");
-    return false;
-}
-
-bool ApplyNoDurabilityLoss(const Config &config)
-{
-    if (!config.no_durability_loss)
-        return true;
-
-    const char *pattern = "\x0F\x84\x00\x00\x00\x00\x8B\x00\x00\x48\x03\x00\x01";
-    const char *mask = "xx????x??xx?x";
-
-    uintptr_t baseAddress = (uintptr_t)GetModuleHandle(NULL);
-    uintptr_t address = Mem::FindPattern(pattern, mask, baseAddress, 0x1000000);
-
-    if (address)
+    // Deactivates the Infinite Item Use mod.
+    void deactivate()
     {
+        mod->deactivate();
+        free_ItemUseMod2->deactivate();
+        active = false;
+        LOG_CLASS("Deactivated");
+    }
+};
 
-        void *newmem = (void *)Mem::AllocateMemoryNearAddress((LPVOID)address, 0x1000);
+class BypassWorldBorders : public Mod
+{
+public:
+    BypassWorldBorders()
+    {
+        // AOB pattern for the original code in the target process.
+        const char* pattern = "\x89\x88\x00\x00\x00\x0F\x10\x00\xF2\x0F\x10\x48\x10"; // Unique AOB
 
-        if (newmem)
+        // Base address of the module (the game).
+        uintptr_t baseAddress = (uintptr_t)GetModuleHandle(NULL);
+
+        // Find the pattern within the game memory (scans within 16MB).
+        uintptr_t address = Mem::FindPattern(pattern, "xxxxxxxxxxxxx", baseAddress, 0xF000000);
+
+        // Check if the address was found.
+        if (address)
         {
-            uint8_t newCode[] = {
-                0x85, 0xF6,
-                0x0F, 0x89, 0x08, 0x00, 0x00, 0x00,
-                0x48, 0x03, 0xC3,
-                0xE9, 0x00, 0x00, 0x00, 0x00, // return addr
-                0x48, 0x03, 0xC3,
-                0x01, 0x34, 0x88,
-                0xE9, 0x00, 0x00, 0x00, 0x00, // return addr
+            // Allocate memory for new instructions to be injected.
+            uint8_t modCode[] = {
+                0xF3, 0x0F, 0x10, 0x05, 0x00, 0x00, 0x00, 0x00, // movups xmm0, [_P]
+                0xF2, 0x0F, 0x10, 0x48, 0x10,                   // movsd xmm1, [_P + 10]
+                0xE9, 0x00, 0x00, 0x00, 0x00                    // jmp return (dynamic, needs to be calculated)
             };
 
-            uint8_t patch[] = {
-                0xE9, 0x00, 0x00, 0x00, 0x00,
-                0x90};
+            // Creating the detour for the AOB address.
+            mod = new Mem::Detour(address + 5, modCode, sizeof(modCode), false, 3);
 
-            uintptr_t returnAddress = address + sizeof(patch);
-
-            *(uint32_t *)(newCode + 12) = (uintptr_t)returnAddress - ((uintptr_t)newmem + 16);
-            *(uint32_t *)(newCode + 23) = (uintptr_t)returnAddress - ((uintptr_t)newmem + sizeof(newCode));
-
-            memcpy(newmem, newCode, sizeof(newCode));
-
-            *(uint32_t *)(patch + 1) = (uintptr_t)newmem - ((uintptr_t)address + 5);
-
-            Mem::Write(address, patch, sizeof(patch));
-
-            Utils::Log("Activated NoDurabilityLoss");
-
-            return true;
+            // Calculate the jump address for the detour.
+            mod->shellcode->updateValue<uint32_t>(
+                sizeof(modCode)-4, (uint32_t)(mod->patch->data->address + mod->patch->data->size)
+                - ((uint32_t)((uintptr_t)mod->shellcode->data->address
+                    + mod->shellcode->data->size))
+            );
         }
     }
 
-    Utils::Log("Failed to activate NoDurabilityLoss");
-    return false;
-}
-
-bool ApplyCloneItemSplits(const Config &config)
-{
-    if (!config.clone_item_splits)
-        return true;
-
-    const char *pattern = "\x29\x00\x04\xEB\x00\x0F\x57";
-    const char *mask = "x?xx?xx";
-
-    uintptr_t baseAddress = (uintptr_t)GetModuleHandle(NULL);
-    uintptr_t address = Mem::FindPattern(pattern, mask, baseAddress, 0x1000000);
-
-    if (address)
+    // Activates the Bypass World Borders mod.
+    void activate()
     {
-        uint8_t patch[] = {
-            0x90, 0x90, 0x90 // NOP 3
-        };
-
-        Mem::Write(address, patch, sizeof(patch));
-
-        Utils::Log("Activated CloneItemSplits");
-
-        return true;
+        mod->activate();
+        active = mod->active;
+        if (active)
+            LOG_CLASS("Activated BypassWorldBorders");
+        else
+            LOG_CLASS("Failed to activate BypassWorldBorders");
     }
 
-    Utils::Log("Failed to activate CloneItemSplits");
-    return false;
-}
-
-bool ApplyFreeCraft(const Config &config)
-{
-    if (!config.free_craft)
-        return true;
-
-    const char *pattern = "\x43\x8B\x74\xF5\x04";
-    const char *mask = "xxxxx";
-
-    uintptr_t baseAddress = (uintptr_t)GetModuleHandle(NULL);
-    uintptr_t address = Mem::FindPattern(pattern, mask, baseAddress, 0x1000000);
-
-    if (address)
+    // Deactivates the Bypass World Borders mod.
+    void deactivate()
     {
-
-        uint8_t patch[] = {
-            0xBE, 0x00, 0x00, 0x00, 0x00};
-
-        Mem::Write(address, patch, sizeof(patch));
-
-        Utils::Log("Activated FreeCraft");
-
-        return true;
+        mod->deactivate();
+        active = false;
+        LOG_CLASS("Deactivated BypassWorldBorders");
     }
+};
 
-    Utils::Log("Failed to activate FreeCraft");
-    return false;
-}
-
-bool ApplyFreeBuild(const Config &config)
+class BypassAltarLimit : public Mod
 {
-    if (!config.free_craft)
-        return true;
-
-    const char *pattern = "\x48\x0F\x00\x00\x00\x8B\x00\x00\x8B\x00\x04\x89";
-    const char *mask = "xx???x??x?xx";
-
-    uintptr_t baseAddress = (uintptr_t)GetModuleHandle(NULL);
-    uintptr_t address = Mem::FindPattern(pattern, mask, baseAddress, 0x1000000);
-
-    if (address)
+public:
+    BypassAltarLimit()
     {
+        // AOB pattern for the original code in the target process.
+        const char* pattern = "\x49\x8B\x8E\xD0\x00\x00\x00\x3B"; // Unique AOB
 
-        uint8_t patch[] = {
-            0x31, 0xF6, 0x90, 0x90};
+        // Base address of the module (the game).
+        uintptr_t baseAddress = (uintptr_t)GetModuleHandle(NULL);
 
-        Mem::Write(address + 7, patch, sizeof(patch));
+        // Find the pattern within the game memory (scans within 16MB).
+        uintptr_t address = Mem::FindPattern(pattern, "xxxxxxxx", baseAddress, 0x1000000);
 
-        Utils::Log("Activated FreeBuild");
+        // Check if the address was found.
+        if (address)
+        {
+            // Allocate memory for new instructions to be injected.
+            uint8_t modCode[] = {
+                0x49, 0x8B, 0x8E, 0xD0, 0x00, 0x00, 0x00, // mov rcx, [r14 + 0xD0]
+                0xB8, 0xFF, 0x00, 0x00, 0x00, // mov eax, 0xFF
+                0xE9, 0x00, 0x00, 0x00, 0x00 // jmp return (dynamic, needs to be calculated)
+            };
 
-        return true;
+            // Creating the detour for the AOB address.
+            mod = new Mem::Detour(address, modCode, sizeof(modCode), false, 2);
+
+            // Calculate the jump address for the detour.
+            mod->shellcode->updateValue<uint32_t>(
+                sizeof(modCode)-4, (uint32_t)(mod->patch->data->address + mod->patch->data->size)
+                - ((uint32_t)((uintptr_t)mod->shellcode->data->address
+                    + mod->shellcode->data->size))
+            );
+        }
     }
-
-    Utils::Log("Failed to activate FreeBuild");
-    return false;
-}
+};
 
 void PatchMemoryLoop()
 {
@@ -361,43 +366,59 @@ void PatchMemoryLoop()
     }
     Utils::Log("Config loaded.");
 
-    if (!config.active)
-        return;
-
-    ExpMultiplier expMultiplier(config.exp_multiplier);
     GliderFlight gliderFlight;
+    NoStaminaLoss noStaminaLoss;
+    NoFallDamage noFallDamage;
+    NoCraftCost noCraftCost;
+    InfiniteItemUse infiniteItemUse;
+    BypassWorldBorders bypassWorldBorders;
+    BypassAltarLimit bypassAltarLimit;
 
-    static bool ActivatedNoFallDamage = false;
-    static bool ActivatedNoStaminaLoss = false;
-    static bool ActivatedNoDurabilityLoss = false;
-    static bool ActivatedCloneItemSplits = false;
-    static bool ActivatedFreeCraft = false;
-    static bool ActivatedFreeBuild = false;
+    Utils::Log("Detours initialized.");
 
     Utils::Log(std::string("Wait for server. Configured boot delay is ").append(std::to_string(config.boot_delay)).append("ms.").c_str());
     Sleep(config.boot_delay);
 
-    // Silent retries if some patch didnt work initally
     while (true)
     {
-        if(config.exp_multiplier != 1 && !expMultiplier.active)
-            expMultiplier.activate();
-        if (config.glider_flight && !gliderFlight.active)
-            gliderFlight.activate();
+        if (config.active) {
+           if (config.glider_flight && !gliderFlight.active)
+                gliderFlight.activate();
+            else if (!config.glider_flight && gliderFlight.active)
+                gliderFlight.deactivate();
 
-        if (!ActivatedNoStaminaLoss)
-            ActivatedNoStaminaLoss = ApplyNoStaminaLoss(config);
-        if (!ActivatedNoFallDamage)
-            ActivatedNoFallDamage = ApplyNoFallDamage(config);
-        if (!ActivatedNoDurabilityLoss)
-            ActivatedNoDurabilityLoss = ApplyNoDurabilityLoss(config);
-        if (!ActivatedCloneItemSplits)
-            ActivatedCloneItemSplits = ApplyCloneItemSplits(config);
-        if (!ActivatedFreeCraft)
-            ActivatedFreeCraft = ApplyFreeCraft(config);
-        if (!ActivatedFreeBuild)
-            ActivatedFreeBuild = ApplyFreeBuild(config);
-        Sleep(2000); // Wait for 1 second before trying again
+            if (config.no_stamina_loss && !noStaminaLoss.active)
+                noStaminaLoss.activate();
+            else if (!config.no_stamina_loss && noStaminaLoss.active)
+                noStaminaLoss.deactivate();
+
+            if (config.no_fall_damage && !noFallDamage.active)
+                noFallDamage.activate();
+            else if (!config.no_fall_damage && noFallDamage.active)
+                noFallDamage.deactivate();
+
+            if (config.no_craft_cost && !noCraftCost.active)
+                noCraftCost.activate();
+            else if (!config.no_craft_cost && noCraftCost.active)
+                noCraftCost.deactivate();
+
+            if (config.inf_item_use && !infiniteItemUse.active)
+                infiniteItemUse.activate();
+            else if (!config.inf_item_use && infiniteItemUse.active)
+                infiniteItemUse.deactivate();
+
+            if (config.bypass_world_borders && !bypassWorldBorders.active)
+                bypassWorldBorders.activate();
+            else if (!config.bypass_world_borders && bypassWorldBorders.active)
+                bypassWorldBorders.deactivate();
+
+            if (config.bypass_altar_limit && !bypassAltarLimit.active)
+                bypassAltarLimit.activate();
+            else if (!config.bypass_altar_limit && bypassAltarLimit.active)
+                bypassAltarLimit.deactivate();
+        }
+        Sleep(2000); // Wait before trying again
+        config.reloadIfChanged();
     }
 }
 

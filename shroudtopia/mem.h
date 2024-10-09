@@ -4,23 +4,83 @@
 
 namespace Mem
 {
-    uintptr_t FindPattern(const char *pattern, const char *mask, uintptr_t start, size_t length)
+#include <windows.h>
+#include <iostream>
+
+    bool WriteToReadOnlyMemory(LPVOID targetAddress, LPVOID data, SIZE_T size)
     {
-        for (uintptr_t i = start; i < start + length; i++)
+        HANDLE hProcess = GetCurrentProcess();
+        DWORD oldProtect;
+
+        // Change memory protection to PAGE_EXECUTE_READWRITE
+        if (!VirtualProtectEx(hProcess, targetAddress, size, PAGE_EXECUTE_READWRITE, &oldProtect))
         {
-            bool found = true;
-            for (size_t j = 0; mask[j] != '\0'; j++)
-            {
-                if (mask[j] != '?' && pattern[j] != *(char *)(i + j))
-                {
-                    found = false;
-                    break;
-                }
-            }
-            if (found)
-                return i;
+            std::cerr << "Failed to change memory protection: " << GetLastError() << std::endl;
+            return false;
         }
-        return 0;
+
+        // Write the data to the target address
+        SIZE_T bytesWritten;
+        if (!WriteProcessMemory(hProcess, targetAddress, data, size, &bytesWritten) || bytesWritten != size)
+        {
+            std::cerr << "Failed to write to memory: " << GetLastError() << std::endl;
+            // Restore original protection before exiting
+            VirtualProtectEx(hProcess, targetAddress, size, oldProtect, &oldProtect);
+            return false;
+        }
+
+        // Restore original protection
+        if (!VirtualProtectEx(hProcess, targetAddress, size, oldProtect, &oldProtect))
+        {
+            std::cerr << "Failed to restore memory protection: " << GetLastError() << std::endl;
+            return false;
+        }
+
+        std::cout << "Successfully wrote to read-only memory at: 0x" << std::hex << (uintptr_t)targetAddress << std::endl;
+        return true;
+    }
+
+    uintptr_t FindPattern(const char* pattern, const char* mask, uintptr_t start, size_t length)
+    {
+        MEMORY_BASIC_INFORMATION mbi;
+        uintptr_t currentAddress = start;
+
+        while (currentAddress < start + length)
+        {
+            if (VirtualQuery((LPCVOID)currentAddress, &mbi, sizeof(mbi)) == sizeof(mbi))
+            {
+                if (mbi.State == MEM_COMMIT &&
+                    (mbi.Protect & (PAGE_EXECUTE_READ | PAGE_EXECUTE | PAGE_READONLY | PAGE_EXECUTE_READWRITE | PAGE_READWRITE)))
+                {
+                    uintptr_t regionStart = (uintptr_t)mbi.BaseAddress;
+                    uintptr_t regionEnd = regionStart + mbi.RegionSize;
+
+                    for (uintptr_t i = regionStart; i < regionEnd - strlen(mask); i++)
+                    {
+                        bool found = true;
+                        for (size_t j = 0; mask[j] != '\0'; j++)
+                        {
+                            if (mask[j] != '?' && pattern[j] != *(char*)(i + j))
+                            {
+                                found = false;
+                                break;
+                            }
+                        }
+                        if (found)
+                        {
+                            return i; // Found the pattern
+                        }
+                    }
+                }
+                currentAddress += mbi.RegionSize; // Move to the next region
+            }
+            else
+            {
+                break; // Exit if VirtualQuery fails
+            }
+        }
+
+        return 0; // Pattern not found
     }
 
     static bool Write(uintptr_t address, const void *buffer, size_t size)
@@ -69,16 +129,27 @@ namespace Mem
         LPVOID lpBaseAddress = nullptr;
 
         // Calculate a range near the target address
-        LPVOID lpMinAddress = (LPVOID)((DWORD_PTR)address - si.dwAllocationGranularity);
+        LPVOID lpMinAddress = (LPVOID)((DWORD_PTR)address - si.dwAllocationGranularity * 10);
+
+        MEMORY_BASIC_INFORMATION mbi;
+        VirtualQueryEx(hProcess, lpMinAddress, &mbi, sizeof(mbi));
+
+        DWORD oldProtect;
+        VirtualProtectEx(hProcess, mbi.BaseAddress, mbi.RegionSize, PAGE_EXECUTE_READWRITE, &oldProtect);
 
         // Attempt to allocate memory within the specified range
         lpBaseAddress = VirtualAllocEx(hProcess, lpMinAddress, dwSize, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 
-        if (!lpBaseAddress)
+        int tries = 0;
+        static const int maxTries = 10;
+        while (!lpBaseAddress && tries < maxTries)
         {
             // Retry with a wider range if necessary
-            lpBaseAddress = VirtualAllocEx(hProcess, (LPVOID)((uintptr_t)lpMinAddress - 0x10000000), dwSize, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+            lpBaseAddress = VirtualAllocEx(hProcess, (LPVOID)((uintptr_t)lpMinAddress - 0x10000000 * (tries + 1)), dwSize, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+            tries++;
         }
+
+        VirtualProtectEx(hProcess, mbi.BaseAddress, mbi.RegionSize, oldProtect, &oldProtect);
 
         return lpBaseAddress;
     }
@@ -138,6 +209,7 @@ namespace Mem
         Shellcode(uint8_t *opcode, size_t opcodeSize, uintptr_t nearAddr = 0)
         {
             uintptr_t address = (uintptr_t)Mem::AllocateMemoryNearAddress(reinterpret_cast<LPVOID>(nearAddr), 0x1000);
+            if (!address) LOG_CLASS("Could not allocate Memory for shell code.");
             data = new MemoryData(address, opcode, opcodeSize);
         }
 
@@ -267,6 +339,11 @@ namespace Mem
 
         bool activate()
         {
+            auto oss = std::ostringstream() << "Shellcode: " << std::hex << "0x" << shellcode->data->address << "\n";
+            oss << "Patch: " << std::hex << "0x" << patch->data->address << "\n";
+            std::string logMessage = oss.str();
+            LOG_CLASS(logMessage.c_str());
+
             if (!active && shellcode && patch)
                 return shellcode->inject() && patch->apply() && (active = true);
             return false;
@@ -274,8 +351,10 @@ namespace Mem
 
         bool deactivate()
         {
-            if (active && shellcode && patch)
-                return shellcode->inject() && patch->apply() && (active = false);
+            if (active && patch) {
+                patch->undo();
+                return (active = false);
+            }
             return false;
         }
     };
