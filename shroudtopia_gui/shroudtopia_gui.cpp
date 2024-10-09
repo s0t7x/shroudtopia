@@ -61,18 +61,18 @@ void SaveConfig(const std::string& filePath) {
 // Function to update the UI controls with the config values
 void UpdateUIFromConfig() {
     // Update the boot delay text box
-    SetWindowTextA(hBootDelayEdit, std::to_string(config["boot_delay"].get<int>()).c_str());
+    SetWindowTextA(hBootDelayEdit, config.contains("boot_delay") ? std::to_string(config["boot_delay"].get<int>()).c_str() : "3000");
 
     // Update the update delay text box
-    SetWindowTextA(hUpdateDelayEdit, std::to_string(config["update_delay"].get<int>()).c_str());
+    SetWindowTextA(hUpdateDelayEdit, config.contains("update_delay") ? std::to_string(config["update_delay"].get<int>()).c_str() : "1000");
 
     // Update the checkbox states
-    SendMessage(hCheckboxes[0], BM_SETCHECK, config["bypass_altar_limit"].get<bool>() ? BST_CHECKED : BST_UNCHECKED, 0);
-    SendMessage(hCheckboxes[1], BM_SETCHECK, config["glider_flight"].get<bool>() ? BST_CHECKED : BST_UNCHECKED, 0);
-    SendMessage(hCheckboxes[2], BM_SETCHECK, config["infinite_item_use"].get<bool>() ? BST_CHECKED : BST_UNCHECKED, 0);
-    SendMessage(hCheckboxes[3], BM_SETCHECK, config["no_craft_cost"].get<bool>() ? BST_CHECKED : BST_UNCHECKED, 0);
-    SendMessage(hCheckboxes[4], BM_SETCHECK, config["no_fall_damage"].get<bool>() ? BST_CHECKED : BST_UNCHECKED, 0);
-    SendMessage(hCheckboxes[5], BM_SETCHECK, config["no_stamina_loss"].get<bool>() ? BST_CHECKED : BST_UNCHECKED, 0);
+    SendMessage(hCheckboxes[0], BM_SETCHECK, config.contains("bypass_altar_limit") ? (config["bypass_altar_limit"].get<bool>() ? BST_CHECKED : BST_UNCHECKED) : BST_UNCHECKED, 0);
+    SendMessage(hCheckboxes[1], BM_SETCHECK, config.contains("glider_flight") ? (config["glider_flight"].get<bool>() ? BST_CHECKED : BST_UNCHECKED) : BST_UNCHECKED, 0);
+    SendMessage(hCheckboxes[2], BM_SETCHECK, config.contains("infinite_item_use") ? (config["infinite_item_use"].get<bool>() ? BST_CHECKED : BST_UNCHECKED) : BST_UNCHECKED, 0);
+    SendMessage(hCheckboxes[3], BM_SETCHECK, config.contains("no_craft_cost") ? (config["no_craft_cost"].get<bool>() ? BST_CHECKED : BST_UNCHECKED) : BST_UNCHECKED, 0);
+    SendMessage(hCheckboxes[4], BM_SETCHECK, config.contains("no_fall_damage") ? (config["no_fall_damage"].get<bool>() ? BST_CHECKED : BST_UNCHECKED) : BST_UNCHECKED, 0);
+    SendMessage(hCheckboxes[5], BM_SETCHECK, config.contains("no_stamina_loss") ? (config["no_stamina_loss"].get<bool>() ? BST_CHECKED : BST_UNCHECKED) : BST_UNCHECKED, 0);
 }
 
 // Function to update the config from the UI controls
