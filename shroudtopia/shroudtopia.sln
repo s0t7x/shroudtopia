@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "shroudtopia", "shroudtopia.
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "winmm", "..\winmm\winmm.vcxproj", "{6FCED408-75B2-4EF9-9E5F-3EC58B19249B}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "shroudtopia_gui", "..\shroudtopia_gui\shroudtopia_gui.vcxproj", "{E267DB7B-5024-432F-93E9-F5E942F8508E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -31,6 +33,14 @@ Global
 		{6FCED408-75B2-4EF9-9E5F-3EC58B19249B}.Release|x64.Build.0 = Release|x64
 		{6FCED408-75B2-4EF9-9E5F-3EC58B19249B}.Release|x86.ActiveCfg = Release|Win32
 		{6FCED408-75B2-4EF9-9E5F-3EC58B19249B}.Release|x86.Build.0 = Release|Win32
+		{E267DB7B-5024-432F-93E9-F5E942F8508E}.Debug|x64.ActiveCfg = Debug|x64
+		{E267DB7B-5024-432F-93E9-F5E942F8508E}.Debug|x64.Build.0 = Debug|x64
+		{E267DB7B-5024-432F-93E9-F5E942F8508E}.Debug|x86.ActiveCfg = Debug|Win32
+		{E267DB7B-5024-432F-93E9-F5E942F8508E}.Debug|x86.Build.0 = Debug|Win32
+		{E267DB7B-5024-432F-93E9-F5E942F8508E}.Release|x64.ActiveCfg = Release|x64
+		{E267DB7B-5024-432F-93E9-F5E942F8508E}.Release|x64.Build.0 = Release|x64
+		{E267DB7B-5024-432F-93E9-F5E942F8508E}.Release|x86.ActiveCfg = Release|Win32
+		{E267DB7B-5024-432F-93E9-F5E942F8508E}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,0 +1,11 @@
+{
+    "active": true,
+    "boot_delay": 3000,
+    "bypass_altar_limit": true,
+    "glider_flight": true,
+    "infinite_item_use": true,
+    "no_craft_cost": true,
+    "no_fall_damage": true,
+    "no_stamina_loss": false,
+    "update_delay": 500
+}
