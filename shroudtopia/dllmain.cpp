@@ -261,6 +261,7 @@ public:
     }
 };
 
+// BROKEN! Actually does opposite of what it should... :(
 class BypassWorldBorders : public Mod
 {
 public:
@@ -278,7 +279,7 @@ public:
         // Check if the address was found.
         if (address)
         {
-            // Allocate memory for new instructions to be injected.
+            // BROKEN! Actually does opposite of what it should... :(
             uint8_t modCode[] = {
                 0xF3, 0x0F, 0x10, 0x05, 0x00, 0x00, 0x00, 0x00, // movups xmm0, [_P]
                 0xF2, 0x0F, 0x10, 0x48, 0x10,                   // movsd xmm1, [_P + 10]
@@ -417,7 +418,7 @@ void PatchMemoryLoop()
             else if (!config.bypass_altar_limit && bypassAltarLimit.active)
                 bypassAltarLimit.deactivate();
         }
-        Sleep(2000); // Wait before trying again
+        Sleep(config.update_delay); // Wait before trying again
         config.reloadIfChanged();
     }
 }

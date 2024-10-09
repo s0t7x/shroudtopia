@@ -18,6 +18,7 @@ public:
 
     bool active = true;
     int boot_delay = 3000;
+    int update_delay = 1000;
 
     bool glider_flight = false;
     bool no_stamina_loss = false;
@@ -38,6 +39,7 @@ public:
 
                 active = jConfig.value("active", false);
                 boot_delay = jConfig.value("boot_delay", 3000);
+                update_delay = jConfig.value("update_delay", 1000);
                 glider_flight = jConfig.value("glider_flight", false);
                 no_stamina_loss = jConfig.value("no_stamina_loss", false);
                 no_fall_damage = jConfig.value("no_fall_damage", false);
@@ -61,6 +63,7 @@ public:
         json jConfig;
         jConfig["active"] = active;
         jConfig["boot_delay"] = boot_delay;
+        jConfig["update_delay"] = update_delay;
         jConfig["glider_flight"] = glider_flight;
         jConfig["no_fall_damage"] = no_fall_damage;
         jConfig["no_stamina_loss"] = no_stamina_loss;
