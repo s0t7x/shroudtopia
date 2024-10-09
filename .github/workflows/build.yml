@@ -18,6 +18,10 @@ jobs:
       run: |
         MSBuild "winmm\winmm.sln" /t:Build /p:Configuration=Release /p:OutDir="${{ github.workspace }}/build/" /p:Platform=x64
       shell: cmd
+    - name: build_gui
+      run: |
+        MSBuild "shroudtopia_gui\shroudtopia_gui.sln" /t:Build /p:Configuration=Release /p:OutDir="${{ github.workspace }}/build/" /p:Platform=x64
+      shell: cmd
     - name: upload
       uses: actions/upload-artifact@v4
       with:
