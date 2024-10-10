@@ -18,9 +18,13 @@ jobs:
       run: |
         MSBuild "winmm\winmm.sln" /t:Build /p:Configuration=Release /p:OutDir="${{ github.workspace }}/build/" /p:Platform=x64
       shell: cmd
-    - name: build_gui
+    - name: build_flight_mod
       run: |
-        MSBuild "shroudtopia_gui\shroudtopia_gui.sln" /t:Build /p:Configuration=Release /p:OutDir="${{ github.workspace }}/build/" /p:Platform=x64
+        MSBuild "flight_mod\flight_mod.sln" /t:Build /p:Configuration=Release /p:OutDir="${{ github.workspace }}/build/mods/" /p:Platform=x64
+      shell: cmd
+    - name: build_basics_mod
+      run: |
+        MSBuild "basics_mod\basics_mod.sln" /t:Build /p:Configuration=Release /p:OutDir="${{ github.workspace }}/build/mods/" /p:Platform=x64
       shell: cmd
     - name: upload
       uses: actions/upload-artifact@v4
@@ -28,3 +32,4 @@ jobs:
         name: win_x64
         path: |
           ${{ github.workspace }}/build/*.dll
+          ${{ github.workspace }}/build/mods/*.dll
