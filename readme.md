@@ -1,67 +1,129 @@
-
 <h1><p align="center">
 Shroudtopia
 </p></h1>
 <p align="center">
-<b>Creative Mode Mod for Enshrouded Dedicated Servers</b>
+<b>Modloader for Enshrouded Dedicated Servers</b>
 </p>
 <p align="center">
 <img alt="Static Badge" src="https://img.shields.io/badge/Game%20Version%20(SVN)-558123-blue">
 </p>
 
-I'm excited to introduce **Shroudtopia**, a mod that brings creative mode functionalities to Enshrouded dedicated servers. Whether you're a builder looking for unlimited resources or an explorer seeking freedom from limitations, Shroudtopia enhances your gameplay experience.
+I'm excited to introduce **Shroudtopia**, a modloader that allows easy management and integration of mods for Enshrouded dedicated servers. With Shroudtopia, you can dynamically load, activate, and deactivate mods without restarting your server, giving you the ultimate flexibility to enhance gameplay.
 
-## Features
+## Modloader Features
 
-- **Fly:** Enjoy full flight capabilities with the glider. No more losing height!
-- **Infinite Altars:** Bypass the general altar limit and make the world yours.
-- ~~**Custom Experience Multiplier:** Adjust experience gain to your preference.~~ *(Obsolete since official gameSettings implementation)*
-- **No Fall Damage:** Explore without the fear of taking fall damage.
-- **No Stamina Loss:** Infinite stamina for uninterrupted gameplay.
-- ~~**No Durability Loss:** Gear and items never degrade or break.~~ *(Obsolete since official gameSettings implementation)*
-- ~~**Item Duplication:** Splitting stacks results in cloned items.~~ *(Broken)*
-- **Free Crafting:** Resources are required but crafting has no cost.
-- **Infinite Item Use & No Building Cost:** Resources are required but using and building has no cost.
+- **Mod Management**: Dynamically load and unload mods from the "mods" folder.
+- **Live Configuration**: Modify mod settings at runtime without restarting the server.
+- **Dependency Injection**: Each mod is fully integrated into the system via the `ModContext`, enabling shared access to configuration, logging, and other utilities.
+
+## Example Mods
+
+- **Flight Mod:** Enjoy full flight capabilities with the glider. No more losing height!
+- **BasicsMod:** Flight Mod is no fun with fall damage. All other legacy Shroudtopia features have been put into this mod. You can selectively activate them in the configuration file.
 
 ## Installation
 
-1. **Download:** Get latest binaries from [release section](https://github.com/s0t7x/shroudtopia/releases).
+1. **Download:** Get the latest modloader binaries from the [release section](https://github.com/s0t7x/shroudtopia/releases).
 2. **Setup:** Extract the files into your Enshrouded dedicated server folder.
-3. **Launch:** Start the server - a default config is generated if `shroudtopia.json` is absent.
+3. **Mods Folder:** Create a `mods` folder if it doesn’t exist and place your mod DLLs inside.
+4. **Launch:** Start the server - a default config is generated if `shroudtopia.json` is absent.
 
-If Shroudtopia is loaded you should see something like this in the server console:
+If Shroudtopia is loaded correctly, you should see something like this in the server console:
 ```
-[shroudtopia] Shroudtopia initialized. Starting thread...
-[shroudtopia] Thread started.
-[shroudtopia] Loading config from 'shroudtopia.json'...
-[shroudtopia] Config loaded.
-[shroudtopia] Wait for server. Configured boot delay is 1000ms.
+[shroudtopia][INFO] Config loaded.
+[shroudtopia][INFO] Wait before injection. Configured boot delay is 3000ms.
 ```
 
-Upon first launch the file ```shroudtopia.json``` is created. By default all mods are deactivated and you have to manually alter the configuration to your likings.
-The file can be changed while the server is running and will be reloaded on-the-fly.
+Upon the first launch, a default configuration file `shroudtopia.json` is created. All mods are deactivated by default, so you must manually activate them by adjusting the configuration.
 
-## Customization
+## Configuration
 
-Each aspect of Shroudtopia is customizable via the `shroudtopia.json` config file. Adjust settings to tailor the mod to your preferred gameplay style:
+Each mod can be enabled or customized via the `shroudtopia.json` config file. Here’s an example configuration:
 
 ```json
 {
     "active": true,
-    "boot_delay": 3000,
-    "bypass_altar_limit": true,
-    "glider_flight": true,
-    "infinite_item_use": true,
-    "no_craft_cost": true,
-    "no_fall_damage": true,
-    "no_stamina_loss": true
+    "bootDelay": 3000,
+    "enableLogging": true,
+    "logLevel": "INFO",
+    "mods": {
+        "basics": {
+            "active": true,
+            "no_stamina_loss": true,
+            "no_fall_damage": true,
+            "no_craft_cost": true,
+            "inf_item_use": true,
+            "bypass_altar_limit": true
+        },
+        "Flight Mod": {
+            "active": true
+        }
+    },
+    "updateDelay": 500
 }
 ```
 
-## Contributing
-Contributions are welcome! Feel free to fork the repository, make improvements, and submit pull requests.
+Each mod exposes its configuration options, which can be altered in `shroudtopia.json`. For instance, to enable or disable specific features for the basics mod:
+```json
+"basics": {
+    "active": true,
+    "no_stamina_loss": true,
+    "no_fall_damage": false,
+    "no_craft_cost": true,
+    "inf_item_use": true,
+    "bypass_altar_limit": true
+}
+```
 
-## License
+# Creating Mods
+Mods for Shroudtopia are written as dynamic libraries (DLLs) and need to include `shroudtopia.h` from `./shroudtopia/`.
+They must implement the `Mod` interface and provide the factory function `extern "C" __declspec(dllexport) Mod* CreateModInstance()`.
+
+Here’s an example factory function:
+```cpp
+extern "C" __declspec(dllexport) Mod* CreateModInstance() {
+    return new BasicsMod();
+}
+```
+
+## Mod Interface
+Every mod must implement the following functions to integrate with the modloader:
+```cpp
+class Mod {
+public:
+    virtual ~Mod() {}
+    virtual ModMetaData GetMetaData() = 0;
+    virtual void Load(ModContext* modContext) = 0;
+    virtual void Unload(ModContext* modContext) = 0;
+    virtual void Activate(ModContext* modContext) = 0;
+    virtual void Deactivate(ModContext* modContext) = 0;
+    virtual void Update(ModContext* modContext) = 0;
+};
+```
+
+`ModMetaData` contains essential information about the mod:
+```cpp
+struct ModMetaData {
+    std::string name;
+    std::string description;
+    std::string version;
+    std::string author;
+    std::string targetShroudtopiaVersion;
+    bool hasClientSupport;
+    bool hasServerSupport;
+};
+```
+
+## ModContext
+The `ModContext` is passed to each mod and provides access to core functionality, such as configuration, logging, and mod management. For example, the mod can retrieve config values via:
+```cpp
+bool enabled = modContext->config.GetBool("modName", "feature_name", false);
+```
+
+# Contributing
+Currently no really game specific functions are implemented in the modContext. This is first try. Anyways, contributions are welcome! Fork the repository, add improvements, and submit pull requests. I would be happy to see more mods for this around.
+
+# License
 This project is licensed under the [MIT License](https://github.com/s0t7x/shroudtopia/blob/0.1-stable/LICENSE).
 
 <hr />
