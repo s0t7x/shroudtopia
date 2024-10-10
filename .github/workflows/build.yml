@@ -24,4 +24,4 @@ jobs:
         name: win_x64
         path: |
           ${{ github.workspace }}/build/*.dll
-          ${{ github.workspace }}/build/mods/*.dll
+          ${{ github.workspace }}/build/mods/**/*.dll
