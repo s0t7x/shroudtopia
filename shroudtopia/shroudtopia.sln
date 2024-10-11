@@ -13,6 +13,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "flight_mod", "..\flight_mod
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "basics_mod", "..\basics_mod\basics_mod.vcxproj", "{00B374C8-36CA-435C-9A97-30892FF79F6C}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "first_person_view", "..\first_person_view\first_person_view.vcxproj", "{9D174757-4383-4332-BD15-582A97C093C0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -61,6 +63,14 @@ Global
 		{00B374C8-36CA-435C-9A97-30892FF79F6C}.Release|x64.Build.0 = Release|x64
 		{00B374C8-36CA-435C-9A97-30892FF79F6C}.Release|x86.ActiveCfg = Release|Win32
 		{00B374C8-36CA-435C-9A97-30892FF79F6C}.Release|x86.Build.0 = Release|Win32
+		{9D174757-4383-4332-BD15-582A97C093C0}.Debug|x64.ActiveCfg = Debug|x64
+		{9D174757-4383-4332-BD15-582A97C093C0}.Debug|x64.Build.0 = Debug|x64
+		{9D174757-4383-4332-BD15-582A97C093C0}.Debug|x86.ActiveCfg = Debug|Win32
+		{9D174757-4383-4332-BD15-582A97C093C0}.Debug|x86.Build.0 = Debug|Win32
+		{9D174757-4383-4332-BD15-582A97C093C0}.Release|x64.ActiveCfg = Release|x64
+		{9D174757-4383-4332-BD15-582A97C093C0}.Release|x64.Build.0 = Release|x64
+		{9D174757-4383-4332-BD15-582A97C093C0}.Release|x86.ActiveCfg = Release|Win32
+		{9D174757-4383-4332-BD15-582A97C093C0}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
