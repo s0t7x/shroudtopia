@@ -2,13 +2,13 @@
 Shroudtopia
 </p></h1>
 <p align="center">
-<b>Modloader for Enshrouded Dedicated Servers</b>
+<b>Modloader for Enshrouded (Servers & Client)</b>
 </p>
 <p align="center">
 <img alt="Static Badge" src="https://img.shields.io/badge/Game%20Version%20(SVN)-558123-blue">
 </p>
 
-I'm excited to introduce **Shroudtopia**, a modloader that allows easy management and integration of mods for Enshrouded dedicated servers. With Shroudtopia, you can dynamically load, activate, and deactivate mods without restarting your server, giving you the ultimate flexibility to enhance gameplay.
+I'm excited to introduce **Shroudtopia**, a modloader that allows easy management and integration of mods for Enshrouded. With Shroudtopia, you can dynamically load, activate, and deactivate mods without restarting, giving you the ultimate flexibility to enhance gameplay.
 
 ## Modloader Features
 
@@ -24,11 +24,11 @@ I'm excited to introduce **Shroudtopia**, a modloader that allows easy managemen
 ## Installation
 
 1. **Download:** Get the latest modloader binaries from the [release section](https://github.com/s0t7x/shroudtopia/releases).
-2. **Setup:** Extract the files into your Enshrouded dedicated server folder.
+2. **Setup:** Extract the files into your game or dedicated server folder.
 3. **Mods Folder:** Create a `mods` folder if it doesn’t exist and place your mod DLLs inside.
-4. **Launch:** Start the server - a default config is generated if `shroudtopia.json` is absent.
+4. **Launch:** Start the game / server - a default config is generated if `shroudtopia.json` is absent.
 
-If Shroudtopia is loaded correctly, you should see something like this in the server console:
+On servers: If Shroudtopia is loaded correctly, you should see something like this in the server console:
 ```
 [shroudtopia][INFO] Config loaded.
 [shroudtopia][INFO] Wait before injection. Configured boot delay is 3000ms.
