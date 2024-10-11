@@ -21,9 +21,9 @@ namespace Utils
     };
 
     void Log(LogLevel level, const char* szInput) {
-        if (!Config::get<bool>("enableLogging", false)) return;
+        if (!Config::get<bool>("enableLogging", true)) return;
         // Check if the current log level allows for logging this message
-        auto llStr = Config::get<std::string>("logLevel", "INFO");
+        auto llStr = Config::get<std::string>("logLevel", "VERBOSE");
         LogLevel currentLogLevel = INFO;
         if (llStr == std::string("NONE")) currentLogLevel = NONE;
         if (llStr == std::string("DEBUG")) currentLogLevel = DEBUG;

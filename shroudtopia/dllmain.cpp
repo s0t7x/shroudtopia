@@ -144,7 +144,10 @@ std::string GetExecutableFilename() {
 
 bool IsRunningOnDedicatedServer() {
     auto filename = GetExecutableFilename();
-    return (filename.find("_server.exe") >= 0);
+    Utils::Log(Utils::DEBUG, std::string("Is running in file: ").append(filename).c_str());
+    bool onServer = (filename.find("_server.exe") != std::string::npos);
+    Utils::Log(Utils::DEBUG, std::string("Is running on server: ").append(std::to_string((int)onServer)).c_str());
+    return onServer;
 }
 
 void UpdateMods() {
