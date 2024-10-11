@@ -1,11 +1,9 @@
 #pragma once
 #include <windows.h>
-#include "utils.h"
+#include <iostream>
 
 namespace Mem
 {
-#include <windows.h>
-#include <iostream>
 
     bool WriteToReadOnlyMemory(LPVOID targetAddress, LPVOID data, SIZE_T size)
     {
@@ -15,7 +13,6 @@ namespace Mem
         // Change memory protection to PAGE_EXECUTE_READWRITE
         if (!VirtualProtectEx(hProcess, targetAddress, size, PAGE_EXECUTE_READWRITE, &oldProtect))
         {
-            std::cerr << "Failed to change memory protection: " << GetLastError() << std::endl;
             return false;
         }
 
@@ -23,7 +20,6 @@ namespace Mem
         SIZE_T bytesWritten;
         if (!WriteProcessMemory(hProcess, targetAddress, data, size, &bytesWritten) || bytesWritten != size)
         {
-            std::cerr << "Failed to write to memory: " << GetLastError() << std::endl;
             // Restore original protection before exiting
             VirtualProtectEx(hProcess, targetAddress, size, oldProtect, &oldProtect);
             return false;
@@ -32,11 +28,8 @@ namespace Mem
         // Restore original protection
         if (!VirtualProtectEx(hProcess, targetAddress, size, oldProtect, &oldProtect))
         {
-            std::cerr << "Failed to restore memory protection: " << GetLastError() << std::endl;
             return false;
         }
-
-        std::cout << "Successfully wrote to read-only memory at: 0x" << std::hex << (uintptr_t)targetAddress << std::endl;
         return true;
     }
 
@@ -209,7 +202,6 @@ namespace Mem
         Shellcode(uint8_t *opcode, size_t opcodeSize, uintptr_t nearAddr = 0)
         {
             uintptr_t address = (uintptr_t)Mem::AllocateMemoryNearAddress(reinterpret_cast<LPVOID>(nearAddr), 0x1000);
-            if (!address) LOG_CLASS("Could not allocate Memory for shell code.");
             data = new MemoryData(address, opcode, opcodeSize);
         }
 
