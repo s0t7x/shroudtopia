@@ -36,9 +36,9 @@ I'm excited to introduce **Shroudtopia**, a modloader that allows easy managemen
 1. **Download:** Get the latest modloader binaries from the [release section](https://github.com/s0t7x/shroudtopia/releases).
 2. **Setup:** Extract the files into your Enshrouded game or dedicated server folder.
 3. **Mods Folder:** Create a `mods` folder if it doesn’t exist and place your mod DLLs inside.
-4. **Launch:** Start the server - a default config is generated if `shroudtopia.json` is absent.
+4. **Launch:** Start the game / server - a default config is generated if `shroudtopia.json` is absent.
 
-If Shroudtopia is loaded correctly, you should see something like this in the server console:
+On servers: If Shroudtopia is loaded correctly, you should see something like this in the server console:
 ```
 [shroudtopia][INFO] Config loaded.
 [shroudtopia][INFO] Wait before injection. Configured boot delay is 3000ms.
