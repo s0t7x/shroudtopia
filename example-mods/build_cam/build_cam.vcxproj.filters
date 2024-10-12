@@ -15,35 +15,19 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="framework.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="targetver.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="Resource.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="shroudtopia_gui.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="nlohmannjson.hpp">
+    <ClInclude Include="pch.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="shroudtopia_gui.cpp">
+    <ClCompile Include="dllmain.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="pch.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="shroudtopia_gui.rc">
-      <Filter>Ressourcendateien</Filter>
-    </ResourceCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="icon.ico">
-      <Filter>Ressourcendateien</Filter>
-    </Image>
+    <None Include="..\first_person_view\first_person_view.vcxproj" />
   </ItemGroup>
 </Project>

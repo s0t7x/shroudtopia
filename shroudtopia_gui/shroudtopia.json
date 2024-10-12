@@ -1,11 +1,23 @@
 {
     "active": true,
-    "boot_delay": 3000,
-    "bypass_altar_limit": true,
-    "glider_flight": true,
-    "infinite_item_use": true,
-    "no_craft_cost": true,
-    "no_fall_damage": true,
-    "no_stamina_loss": false,
-    "update_delay": 500
+    "bootDelay": 3000,
+    "enableLogging": true,
+    "logLevel": "VERBOSE",
+    "mods": {
+        "basics": {
+            "active": true,
+            "no_stamina_loss": true,
+            "no_fall_damage": true,
+            "no_craft_cost": true,
+            "inf_item_use": true,
+            "bypass_altar_limit": false
+        },
+        "Flight Mod": {
+            "active": true
+        },
+        "whitelist": {
+            "active": false
+        }
+    },
+    "updateDelay": 500
 }
