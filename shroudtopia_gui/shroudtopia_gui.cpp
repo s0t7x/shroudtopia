@@ -1,372 +1,252 @@
-// shroudtopia_gui.cpp : Definiert den Einstiegspunkt für die Anwendung.
-//
-
-#include "framework.h"
-#include "shroudtopia_gui.h"
+#include <windows.h>
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <map>
+#include <vector>
 
 #include "nlohmannjson.hpp"
 
-#include <windows.h>
-#include <fstream>
-#include <string>
-#include <commdlg.h> // For OpenFile dialog
-
-#include "Resource.h"
-
 using json = nlohmann::json;
 
-json config = {
-    {"active", true},
-    {"boot_delay", 3000},
-    {"update_delay", 500},
-    {"bypass_altar_limit", false},
-    {"glider_flight", false},
-    {"infinite_item_use", false},
-    {"no_craft_cost", false},
-    {"no_fall_damage", false},
-    {"no_stamina_loss", false}
-};
+json shroudtopiaData = R"({
+    "active": true,
+    "bootDelay": 3000,
+    "enableLogging": true,
+    "logLevel": "VERBOSE",
+    "mods": {},
+    "updateDelay": 500
+})"_json; // Global JSON object to hold the data
 
-#define CONFIG_FILE "shroudtopia.json"
+std::string filename = "shroudtopia.json";
 
-// Global variable to store JSON data
-json configJson;
+#define ID_ADD_MOD 1000
+#define ID_ADD_PROP_OFFSET 2000
+#define ID_TYPE_DROPDOWN_OFFSET 3000
 
-HWND hCheckboxes[6];
-HWND hBootDelayEdit, hUpdateDelayEdit;
+const int MAX_WINDOW_WIDTH = 500;
+const int MAX_WINDOW_HEIGHT = 500;
 
-void LoadConfig(const std::string& filePath) {
-    std::ifstream file(filePath);
-    if (file.is_open()) {
-        try {
-            file >> config;
-        }
-        catch (...) {
-            // In case of any error, we revert to default values
-            MessageBox(NULL, "Error loading config, using default values.", "Error", MB_OK | MB_ICONERROR);
-        }
-    }
-    file.close();
-}
+// Controls and dropdowns tracking
+std::map<std::string, HWND> controls;
+std::vector<HWND> typeDropdowns;
+std::vector<std::pair<std::string, std::string>> modProperties;
+std::vector<int> addPropertyButtons;
 
-// Function to save config to a file
-void SaveConfig(const std::string& filePath) {
-    std::ofstream file(filePath);
-    if (file.is_open()) {
-        file << config.dump(4);  // Pretty print the JSON with indentation
-    }
-    file.close();
-}
-
-// Function to update the UI controls with the config values
-void UpdateUIFromConfig() {
-    // Update the boot delay text box
-    SetWindowTextA(hBootDelayEdit, config.contains("boot_delay") ? std::to_string(config["boot_delay"].get<int>()).c_str() : "3000");
-
-    // Update the update delay text box
-    SetWindowTextA(hUpdateDelayEdit, config.contains("update_delay") ? std::to_string(config["update_delay"].get<int>()).c_str() : "1000");
-
-    // Update the checkbox states
-    SendMessage(hCheckboxes[0], BM_SETCHECK, config.contains("bypass_altar_limit") ? (config["bypass_altar_limit"].get<bool>() ? BST_CHECKED : BST_UNCHECKED) : BST_UNCHECKED, 0);
-    SendMessage(hCheckboxes[1], BM_SETCHECK, config.contains("glider_flight") ? (config["glider_flight"].get<bool>() ? BST_CHECKED : BST_UNCHECKED) : BST_UNCHECKED, 0);
-    SendMessage(hCheckboxes[2], BM_SETCHECK, config.contains("infinite_item_use") ? (config["infinite_item_use"].get<bool>() ? BST_CHECKED : BST_UNCHECKED) : BST_UNCHECKED, 0);
-    SendMessage(hCheckboxes[3], BM_SETCHECK, config.contains("no_craft_cost") ? (config["no_craft_cost"].get<bool>() ? BST_CHECKED : BST_UNCHECKED) : BST_UNCHECKED, 0);
-    SendMessage(hCheckboxes[4], BM_SETCHECK, config.contains("no_fall_damage") ? (config["no_fall_damage"].get<bool>() ? BST_CHECKED : BST_UNCHECKED) : BST_UNCHECKED, 0);
-    SendMessage(hCheckboxes[5], BM_SETCHECK, config.contains("no_stamina_loss") ? (config["no_stamina_loss"].get<bool>() ? BST_CHECKED : BST_UNCHECKED) : BST_UNCHECKED, 0);
-}
-
-// Function to update the config from the UI controls
-void UpdateConfigFromUI() {
-    char buffer[256];
-
-    // Boot delay
-    GetWindowTextA(hBootDelayEdit, buffer, sizeof(buffer));
-    config["boot_delay"] = std::stoi(buffer);
-
-    // Update delay
-    GetWindowTextA(hUpdateDelayEdit, buffer, sizeof(buffer));
-    config["update_delay"] = std::stoi(buffer);
-
-    // Boolean checkboxes
-    config["bypass_altar_limit"] = (SendMessage(hCheckboxes[0], BM_GETCHECK, 0, 0) == BST_CHECKED);
-    config["glider_flight"] = (SendMessage(hCheckboxes[1], BM_GETCHECK, 0, 0) == BST_CHECKED);
-    config["infinite_item_use"] = (SendMessage(hCheckboxes[2], BM_GETCHECK, 0, 0) == BST_CHECKED);
-    config["no_craft_cost"] = (SendMessage(hCheckboxes[3], BM_GETCHECK, 0, 0) == BST_CHECKED);
-    config["no_fall_damage"] = (SendMessage(hCheckboxes[4], BM_GETCHECK, 0, 0) == BST_CHECKED);
-    config["no_stamina_loss"] = (SendMessage(hCheckboxes[5], BM_GETCHECK, 0, 0) == BST_CHECKED);
-}
-
-// Function to handle file loading
-void ImportConfigFile(HWND hWnd) {
-    OPENFILENAME ofn;
-    char szFile[260] = { 0 };
-
-    ZeroMemory(&ofn, sizeof(ofn));
-    ofn.lStructSize = sizeof(ofn);
-    ofn.hwndOwner = hWnd;
-    ofn.lpstrFile = szFile;
-    ofn.nMaxFile = sizeof(szFile);
-    ofn.lpstrFilter = "JSON\0*.json\0All\0*.*\0";
-    ofn.nFilterIndex = 1;
-    ofn.lpstrFileTitle = NULL;
-    ofn.nMaxFileTitle = 0;
-    ofn.lpstrInitialDir = NULL;
-    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-
-    if (GetOpenFileName(&ofn) == TRUE) {
-        LoadConfig(ofn.lpstrFile);
-        UpdateUIFromConfig();
-    }
-}
-
-// Function to handle file exporting
-void ExportConfigFile(HWND hWnd) {
-    OPENFILENAME ofn;
-    char szFile[260] = { 0 };
-
-    ZeroMemory(&ofn, sizeof(ofn));
-    ofn.lStructSize = sizeof(ofn);
-    ofn.hwndOwner = hWnd;
-    ofn.lpstrFile = szFile;
-    ofn.nMaxFile = sizeof(szFile);
-    ofn.lpstrFilter = "JSON\0*.json\0All\0*.*\0";
-    ofn.nFilterIndex = 1;
-    ofn.lpstrFileTitle = NULL;
-    ofn.nMaxFileTitle = 0;
-    ofn.lpstrInitialDir = NULL;
-    ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
-
-    if (GetSaveFileName(&ofn) == TRUE) {
-        UpdateConfigFromUI();
-        SaveConfig(ofn.lpstrFile);
-    }
-}
-
-#define MAX_LOADSTRING 100
-
-// Globale Variablen:
-HINSTANCE hInst;                                // Aktuelle Instanz
-CHAR szTitle[MAX_LOADSTRING];                  // Titelleistentext
-CHAR szWindowClass[MAX_LOADSTRING];            // Der Klassenname des Hauptfensters.
-
-// Vorwärtsdeklarationen der in diesem Codemodul enthaltenen Funktionen:
-ATOM                MyRegisterClass(HINSTANCE hInstance);
-BOOL                InitInstance(HINSTANCE, int);
-LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
-
-int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
-                     _In_opt_ HINSTANCE hPrevInstance,
-                     _In_ LPWSTR    lpCmdLine,
-                     _In_ int       nCmdShow)
+// Load JSON from file
+void LoadJSON(const std::string& file)
 {
-    UNREFERENCED_PARAMETER(hPrevInstance);
-    UNREFERENCED_PARAMETER(lpCmdLine);
-
-    // TODO: Hier Code einfügen.
-
-    // Globale Zeichenfolgen initialisieren
-    LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    LoadString(hInstance, IDC_SHROUDTOPIAGUI, szWindowClass, MAX_LOADSTRING);
-    MyRegisterClass(hInstance);
-
-    // Anwendungsinitialisierung ausführen:
-    if (!InitInstance (hInstance, nCmdShow))
+    std::ifstream ifs(file);
+    if (ifs.is_open())
     {
-        return FALSE;
+        ifs >> shroudtopiaData;
+    }
+}
+
+// Save JSON to file
+void SaveJSON(const std::string& file)
+{
+    std::ofstream ofs(file);
+    if (ofs.is_open())
+    {
+        ofs << shroudtopiaData.dump(4);
+    }
+}
+
+// Helper to create a control for each field
+HWND CreateControl(HWND parent, const std::string& label, const nlohmann::json& value, int& yOffset, int id, const std::string& key)
+{
+    HWND hwndStatic = CreateWindow("STATIC", label.c_str(), WS_VISIBLE | WS_CHILD, 10, yOffset, 200, 20, parent, nullptr, nullptr, nullptr);
+    HWND hwndControl = nullptr;
+
+    if (value.is_boolean())
+    {
+        hwndControl = CreateWindow("BUTTON", "", WS_VISIBLE | WS_CHILD | BS_CHECKBOX, 220, yOffset, 20, 20, parent, (HMENU)id, nullptr, nullptr);
+        SendMessage(hwndControl, BM_SETCHECK, value.get<bool>() ? BST_CHECKED : BST_UNCHECKED, 0);
+    }
+    else if (value.is_number_integer())
+    {
+        hwndControl = CreateWindow("EDIT", std::to_string(value.get<int>()).c_str(), WS_VISIBLE | WS_CHILD | WS_BORDER, 220, yOffset, 100, 20, parent, (HMENU)id, nullptr, nullptr);
+    }
+    else if (value.is_string())
+    {
+        hwndControl = CreateWindow("EDIT", value.get<std::string>().c_str(), WS_VISIBLE | WS_CHILD | WS_BORDER, 220, yOffset, 100, 20, parent, (HMENU)id, nullptr, nullptr);
     }
 
-    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_SHROUDTOPIAGUI));
+    yOffset += 30;
+    return hwndControl;
+}
 
-    MSG msg;
-
-    // Hauptnachrichtenschleife:
-    while (GetMessage(&msg, nullptr, 0, 0))
+// Dynamically create UI controls based on JSON content
+void CreateControls(HWND hwnd)
+{
+    // Clear all existing controls before redrawing
+    for (auto& [key, control] : controls)
     {
-        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+        DestroyWindow(control);
+    }
+    controls.clear();
+    typeDropdowns.clear();
+    modProperties.clear();
+    addPropertyButtons.clear();
+
+    int yOffset = 10;
+
+    // Create controls for root-level JSON fields
+    for (auto& [key, value] : shroudtopiaData.items())
+    {
+        if (key == "mods")
+            continue; // Mods handled separately
+
+        int id = controls.size() + 1;
+        HWND control = CreateControl(hwnd, key, value, yOffset, id, key);
+        controls[key] = control;
+    }
+
+    // Create controls for mods
+    for (auto& [modName, modPropertiesJson] : shroudtopiaData["mods"].items())
+    {
+        HWND hwndStatic = CreateWindow("STATIC", modName.c_str(), WS_VISIBLE | WS_CHILD, 10, yOffset, 200, 20, hwnd, nullptr, nullptr, nullptr);
+        yOffset += 30;
+
+        // Create controls for each mod property
+        for (auto& [propName, propValue] : modPropertiesJson.items())
         {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
+            std::string fullKey = modName + "." + propName;
+            int id = controls.size() + 1;
+
+            // Create property control
+            HWND control = CreateControl(hwnd, propName, propValue, yOffset, id, fullKey);
+            controls[fullKey] = control;
+
+            // Create type dropdown
+            HWND hwndDropdown = CreateWindow("COMBOBOX", "", WS_VISIBLE | WS_CHILD | CBS_DROPDOWNLIST | WS_VSCROLL, 330, yOffset - 30, 100, 100, hwnd, (HMENU)(ID_TYPE_DROPDOWN_OFFSET + id), nullptr, nullptr);
+            SendMessage(hwndDropdown, CB_ADDSTRING, 0, (LPARAM)"bool");
+            SendMessage(hwndDropdown, CB_ADDSTRING, 0, (LPARAM)"string");
+            SendMessage(hwndDropdown, CB_ADDSTRING, 0, (LPARAM)"number");
+
+            int typeIndex = propValue.is_boolean() ? 0 : propValue.is_string() ? 1 : 2;
+            SendMessage(hwndDropdown, CB_SETCURSEL, typeIndex, 0);
+
+            typeDropdowns.push_back(hwndDropdown);
+            modProperties.emplace_back(modName, propName);
         }
+
+        // Add "Add Property" button
+        int addPropID = ID_ADD_PROP_OFFSET + addPropertyButtons.size();
+        HWND hwndButton = CreateWindow("BUTTON", "Add Property", WS_VISIBLE | WS_CHILD, 10, yOffset, 200, 30, hwnd, (HMENU)addPropID, nullptr, nullptr);
+        yOffset += 40;
+        addPropertyButtons.push_back(addPropID);
     }
 
-    return (int) msg.wParam;
+    // Add "Add Mod" button at the end
+    HWND hwndAddModButton = CreateWindow("BUTTON", "Add Mod", WS_VISIBLE | WS_CHILD, 10, yOffset, 200, 30, hwnd, (HMENU)ID_ADD_MOD, nullptr, nullptr);
 }
 
-
-
-//
-//  FUNKTION: MyRegisterClass()
-//
-//  ZWECK: Registriert die Fensterklasse.
-//
-ATOM MyRegisterClass(HINSTANCE hInstance)
+// Window Procedure
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-    WNDCLASSEX wcex;
+    static HWND hwndScroll;
+    static int scrollPos = 0;
+    static SCROLLINFO si;
 
-    wcex.cbSize = sizeof(WNDCLASSEX);
-
-    wcex.style          = CS_HREDRAW | CS_VREDRAW;
-    wcex.lpfnWndProc    = WndProc;
-    wcex.cbClsExtra     = 0;
-    wcex.cbWndExtra     = 0;
-    wcex.hInstance      = hInstance;
-    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDC_MYICON));
-    wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
-    wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
-    wcex.lpszMenuName   = MAKEINTRESOURCE(IDC_SHROUDTOPIAGUI);
-    wcex.lpszClassName  = szWindowClass;
-    wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDC_MYICON));
-
-    return RegisterClassEx(&wcex);
-}
-
-int windowWidth = 300;
-int windowHeight = 310;
-
-//
-//   FUNKTION: InitInstance(HINSTANCE, int)
-//
-//   ZWECK: Speichert das Instanzenhandle und erstellt das Hauptfenster.
-//
-//   KOMMENTARE:
-//
-//        In dieser Funktion wird das Instanzenhandle in einer globalen Variablen gespeichert, und das
-//        Hauptprogrammfenster wird erstellt und angezeigt.
-//
-BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
-{
-   hInst = hInstance; // Instanzenhandle in der globalen Variablen speichern
-
-   // Get the screen dimensions
-   int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-   int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-
-   // Calculate the centered position
-   int x = (screenWidth - windowWidth) / 2;
-   int y = (screenHeight - windowHeight) / 2;
-
-   HWND hWnd = CreateWindowEx(
-       0,                              // Optional window styles
-       szWindowClass, szTitle,
-       WS_OVERLAPPEDWINDOW | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX, // Window style
-       x, y, windowWidth, windowHeight,
-       NULL,                           // Parent window    
-       NULL,                           // Menu
-       hInstance,                      // Instance handle
-       NULL                            // Additional application data
-   );
-
-   if (!hWnd)
-   {
-      return FALSE;
-   }
-
-
-   // Set the window position and size
-   SetWindowPos(hWnd, NULL, x, y, windowWidth, windowHeight, SWP_NOZORDER);
-
-   ShowWindow(hWnd, nCmdShow);
-   UpdateWindow(hWnd);
-
-   return TRUE;
-}
-
-#define IDC_CHECKBOX_START 1100
-
-//
-//  FUNKTION: WndProc(HWND, UINT, WPARAM, LPARAM)
-//
-//  ZWECK: Verarbeitet Meldungen für das Hauptfenster.
-//
-//  WM_COMMAND  - Verarbeiten des Anwendungsmenüs
-//  WM_PAINT    - Darstellen des Hauptfensters
-//  WM_DESTROY  - Ausgeben einer Beendenmeldung und zurückkehren
-//
-//
-LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    switch (message)
+    switch (uMsg)
     {
-    case WM_CREATE: {
-        // Create edit controls for boot and update delay
-        CreateWindow("STATIC", "Boot Delay (ms):", WS_VISIBLE | WS_CHILD, 10, 10, 150, 20, hWnd, NULL, NULL, NULL);
-        hBootDelayEdit = CreateWindow("EDIT", "", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_NUMBER, 170, 10, 100, 20, hWnd, NULL, NULL, NULL);
+    case WM_CREATE:
+        // Initialize scroll bar
+        hwndScroll = CreateWindowEx(0, "SCROLLBAR", nullptr, WS_CHILD | WS_VISIBLE | SBS_VERT,
+            MAX_WINDOW_WIDTH - 20, 0, 20, MAX_WINDOW_HEIGHT, hwnd, (HMENU)1, GetModuleHandle(nullptr), nullptr);
 
-        CreateWindow("STATIC", "Update Delay (ms):", WS_VISIBLE | WS_CHILD, 10, 40, 150, 20, hWnd, NULL, NULL, NULL);
-        hUpdateDelayEdit = CreateWindow("EDIT", "", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_NUMBER, 170, 40, 100, 20, hWnd, NULL, NULL, NULL);
+        // Set scroll bar properties
+        si.cbSize = sizeof(si);
+        si.fMask = SIF_ALL;
+        si.nMin = 0;
+        si.nMax = 100;
+        si.nPage = 50;
+        si.nPos = 0;
+        SetScrollInfo(hwndScroll, SB_CTL, &si, TRUE);
 
-        // Create checkboxes for the boolean values
-        hCheckboxes[0] = CreateWindow("BUTTON", "Bypass Altar Limit", WS_VISIBLE | WS_CHILD | BS_CHECKBOX, 10, 70, 200, 20, hWnd, (HMENU)(IDC_CHECKBOX_START + 0), NULL, NULL);
-        hCheckboxes[1] = CreateWindow("BUTTON", "Glider Flight", WS_VISIBLE | WS_CHILD | BS_CHECKBOX, 10, 100, 200, 20, hWnd, (HMENU)(IDC_CHECKBOX_START + 1), NULL, NULL);
-        hCheckboxes[2] = CreateWindow("BUTTON", "Infinite Item Use", WS_VISIBLE | WS_CHILD | BS_CHECKBOX, 10, 130, 200, 20, hWnd, (HMENU)(IDC_CHECKBOX_START + 2), NULL, NULL);
-        hCheckboxes[3] = CreateWindow("BUTTON", "No Craft Cost", WS_VISIBLE | WS_CHILD | BS_CHECKBOX, 10, 160, 200, 20, hWnd, (HMENU)(IDC_CHECKBOX_START + 3), NULL, NULL);
-        hCheckboxes[4] = CreateWindow("BUTTON", "No Fall Damage", WS_VISIBLE | WS_CHILD | BS_CHECKBOX, 10, 190, 200, 20, hWnd, (HMENU)(IDC_CHECKBOX_START + 4), NULL, NULL);
-        hCheckboxes[5] = CreateWindow("BUTTON", "No Stamina Loss", WS_VISIBLE | WS_CHILD | BS_CHECKBOX, 10, 220, 200, 20, hWnd, (HMENU)(IDC_CHECKBOX_START + 5), NULL, NULL);
+        // Create initial controls
+        CreateControls(hwnd);
+        break;
 
-        // Initialize UI with current config values
-        LoadConfig(CONFIG_FILE);
-        UpdateUIFromConfig();
+    case WM_VSCROLL:
+        // Handle scrolling
+        si.cbSize = sizeof(si);
+        si.fMask = SIF_ALL;
+        GetScrollInfo(hwndScroll, SB_CTL, &si);
 
-        SetTimer(hWnd, 1, 500, NULL); // Set timer to 0.5 seconds
-    }
-    break;
+        switch (LOWORD(wParam))
+        {
+        case SB_LINEUP:
+            scrollPos = max(0, scrollPos - 10);
+            break;
+        case SB_LINEDOWN:
+            scrollPos = min(si.nMax, scrollPos + 10);
+            break;
+        case SB_THUMBPOSITION:
+        case SB_THUMBTRACK:
+            scrollPos = HIWORD(wParam);
+            break;
+        }
+
+        si.fMask = SIF_POS;
+        si.nPos = scrollPos;
+        SetScrollInfo(hwndScroll, SB_CTL, &si, TRUE);
+
+        InvalidateRect(hwnd, nullptr, TRUE);
+        break;
+
     case WM_COMMAND:
-    {
-        int wmId = LOWORD(wParam);
-
-        if (wmId >= IDC_CHECKBOX_START && wmId < IDC_CHECKBOX_START + 6) {
-            int checkboxIndex = LOWORD(wParam) - IDC_CHECKBOX_START; // Assuming you define IDC_CHECKBOX_START
-            // Toggle the checkbox state
-            int checkState = SendMessage(hCheckboxes[checkboxIndex], BM_GETCHECK, 0, 0);
-            SendMessage(hCheckboxes[checkboxIndex], BM_SETCHECK, (checkState == BST_CHECKED) ? BST_UNCHECKED : BST_CHECKED, 0);
-        }
-        // Parse the menu selections
-        switch (wmId)
+        // Handle type dropdown, add mod/property logic
+        if (HIWORD(wParam) == CBN_SELCHANGE)
         {
-        //case ID_FILE_SAVE:
-        //    UpdateConfigFromUI();
-        //    SaveConfig(CONFIG_FILE);
-        //    break;
+            HWND dropdown = (HWND)lParam;
+            int selectedIndex = (int)SendMessage(dropdown, CB_GETCURSEL, 0, 0);
 
-        case ID_FILE_IMPORT:
-            ImportConfigFile(hWnd);
-            break;
+            for (size_t i = 0; i < typeDropdowns.size(); ++i)
+            {
+                if (dropdown == typeDropdowns[i])
+                {
+                    auto& [modName, propName] = modProperties[i];
+                    nlohmann::json& modValue = shroudtopiaData["mods"][modName][propName];
 
-        case ID_FILE_EXPORT:
-            ExportConfigFile(hWnd);
-            break;
+                    if (selectedIndex == 0) modValue = false;
+                    else if (selectedIndex == 1) modValue = "";
+                    else if (selectedIndex == 2) modValue = 0;
 
-        case IDM_EXIT:
-            DestroyWindow(hWnd);
-            break;
+                    SaveJSON(filename);
+                    break;
+                }
+            }
         }
-    }
-    break;
-
-    case WM_PAINT: {
-        PAINTSTRUCT ps;
-        HDC hdc = BeginPaint(hWnd, &ps);
-        // You can add additional drawing code here if needed
-        EndPaint(hWnd, &ps);
-    }
-    break;
-
-    case WM_TIMER:
-        if (wParam == 1) { // Check for the timer identifier
-            UpdateConfigFromUI();
-            SaveConfig(CONFIG_FILE);
+        else if (HIWORD(wParam) == BN_CLICKED)
+        {
+            if (LOWORD(wParam) == ID_ADD_MOD)
+            {
+                // Add new mod logic
+                std::string newModName = "Mod" + std::to_string(modProperties.size() + 1);
+                shroudtopiaData["mods"][newModName] = nlohmann::json::object();
+                SaveJSON(filename);
+                CreateControls(hwnd);
+            }
+            else if (LOWORD(wParam) >= ID_ADD_PROP_OFFSET)
+            {
+                // Add new property logic
+                int index = LOWORD(wParam) - ID_ADD_PROP_OFFSET;
+                std::string modName = modProperties[index].first;
+                shroudtopiaData["mods"][modName]["New Property"] = false;
+                SaveJSON(filename);
+                CreateControls(hwnd);
+            }
         }
         break;
 
-    case WM_GETMINMAXINFO: 
+    case WM_PAINT:
     {
-        MINMAXINFO* mmi = (MINMAXINFO*)lParam;
-        mmi->ptMaxTrackSize.x = windowWidth; // Set maximum width
-        mmi->ptMaxTrackSize.y = windowHeight; // Set maximum height
-        mmi->ptMinTrackSize.x = windowWidth; // Set minimum width
-        mmi->ptMinTrackSize.y = windowHeight; // Set minimum height
-        return 0;
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hwnd, &ps);
+        EndPaint(hwnd, &ps);
     }
     break;
 
@@ -375,27 +255,50 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
 
     default:
-        return DefWindowProc(hWnd, message, wParam, lParam);
+        return DefWindowProc(hwnd, uMsg, wParam, lParam);
     }
+
     return 0;
 }
 
-// Meldungshandler für Infofeld.
-INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 {
-    UNREFERENCED_PARAMETER(lParam);
-    switch (message)
-    {
-    case WM_INITDIALOG:
-        return (INT_PTR)TRUE;
+    LoadJSON(filename);
 
-    case WM_COMMAND:
-        if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
-        {
-            EndDialog(hDlg, LOWORD(wParam));
-            return (INT_PTR)TRUE;
-        }
-        break;
+    const char CLASS_NAME[] = "JSON Editor";
+
+    WNDCLASS wc = {};
+    wc.lpfnWndProc = WindowProc;
+    wc.hInstance = hInstance;
+    wc.lpszClassName = CLASS_NAME;
+
+    RegisterClass(&wc);
+
+    HWND hwnd = CreateWindowEx(
+        0,
+        CLASS_NAME,
+        "JSON Editor",
+        WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, CW_USEDEFAULT, MAX_WINDOW_WIDTH, MAX_WINDOW_HEIGHT,
+        nullptr,
+        nullptr,
+        hInstance,
+        nullptr
+    );
+
+    if (hwnd == nullptr)
+    {
+        return 0;
     }
-    return (INT_PTR)FALSE;
+
+    ShowWindow(hwnd, nCmdShow);
+
+    MSG msg = {};
+    while (GetMessage(&msg, nullptr, 0, 0))
+    {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+
+    return 0;
 }

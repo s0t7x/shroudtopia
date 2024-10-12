@@ -245,7 +245,9 @@ BOOL APIENTRY DllMain(HMODULE hModule,
                 [](const char* modKey, const char* key, int defaultValue = 0) { return Config::modGet<int>(modKey, key, defaultValue); },
                 [](const char* modKey, const char* key, float defaultValue = 0.0f) { return Config::modGet<float>(modKey, key, defaultValue); }
             },
-            [=](std::string msg) { Utils::Log(Utils::INFO, msg.c_str()); }
+            [=](const char * msg) {
+                Utils::Log(Utils::INFO, msg);
+            }
         });
     }
     switch (ul_reason_for_call)
