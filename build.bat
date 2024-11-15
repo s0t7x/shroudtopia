@@ -6,7 +6,6 @@ RD /S /Q build
 mkdir build
 mkdir build\x64
 MSBuild "shroudtopia\shroudtopia.sln" /t:Build /p:Configuration=Release /p:OutDir="..\build\x64" /p:Platform=x64
-MSBuild "winmm\winmm.sln" /t:Build /p:Configuration=Release /p:OutDir="..\build\x64" /p:Platform=x64
 echo. 
 echo All builds completed.
 echo.

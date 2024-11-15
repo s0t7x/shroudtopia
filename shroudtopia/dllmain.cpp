@@ -1,122 +1,114 @@
 #include "pch.h"
+#include "defines.h"
 #include "mem.h"
-#include <thread>
-#include <sstream>
-#include <iomanip>
-#include <chrono>
-
 #include "utils.h"
 #include "shroudtopia.h"
 
 #include <filesystem>
+#include <sstream>
+#include <iomanip>
+#include <thread>
+#include <chrono>
+
+namespace fs = std::filesystem;
+
+ModContext* modContext;
 
 json Config::jConfig;
 std::filesystem::file_time_type Config::lastModifiedTime;
 
-namespace fs = std::filesystem;
-
-// Get the last modification time of a file
-std::chrono::system_clock::time_point GetLastWriteTime(const std::string& filePath) {
-    auto ftime = fs::last_write_time(filePath);
-    auto system_time = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
-        ftime - fs::file_time_type::clock::now() + std::chrono::system_clock::now()
-    );
-    return system_time;
-}
-
 typedef Mod* (*CreateModFunc)();
+std::string activeModName = "";
 
-ModContext* modContext;
-
-struct DllInfo {
-    HMODULE hModule; // Handle to the loaded DLL
-    std::chrono::system_clock::time_point lastModified; // Last modification time
-};
-
-// Unload a mod by freeing the DLL
-void UnloadDll(DllInfo& modInfo) {
-    if (modInfo.hModule) {
-        FreeLibrary(modInfo.hModule);
+// Unload a DLL and log the operation
+void UnloadDll(HMODULE hModule) {
+    if (hModule) {
+        Utils::Log(Utils::INFO, "Unloading DLL.");
+        FreeLibrary(hModule);
     }
 }
 
-void LoadAndRegisterMod(const char* dllPath) {
-    HMODULE hMod = LoadLibraryA(dllPath);
-    if (hMod) {
-        CreateModFunc createMod = (CreateModFunc)GetProcAddress(hMod, "CreateModInstance");
-        if (createMod) {
-            Mod* modInstance = createMod();
-            if (modInstance) {
-                modContext->registeredMods[std::string(dllPath)] = modInstance;
-                Utils::Log(Utils::DEBUG, std::string().append(modInstance->GetMetaData().name).append(" registered.").c_str());
-            }
-        }
+// Load a mod and register it
+void LoadAndRegisterMod(const std::string& dllPath) {
+    Utils::Log(Utils::DEBUG, std::string("Loading DLL: ").append(dllPath).c_str());
+
+    HMODULE hMod = LoadLibraryA(dllPath.c_str());
+    if (!hMod) {
+        Utils::Log(Utils::ERRR, std::string("Failed to load DLL: ").append(dllPath).c_str());
+        return;
     }
+
+    CreateModFunc createMod = (CreateModFunc)GetProcAddress(hMod, "CreateModInstance");
+    if (!createMod) {
+        Utils::Log(Utils::ERRR, std::string("CreateModInstance function not found in DLL: ").append(dllPath).c_str());
+        FreeLibrary(hMod);
+        return;
+    }
+
+    Mod* modInstance = createMod();
+    if (!modInstance) {
+        Utils::Log(Utils::ERRR, "Failed to create mod instance.");
+        FreeLibrary(hMod);
+        return;
+    }
+
+    Utils::Log(Utils::INFO, std::string("Registering mod: ").append(modInstance->GetMetaData().name).c_str());
+    modContext->registeredMods[dllPath] = modInstance;
 }
 
-std::map<std::string, DllInfo> loadedDLLs;
+std::map<std::string, HMODULE> loadedDLLs;
 
-void CheckAndReloadDlls(const std::string& modFolder = MOD_FOLDER) {
-    // Iterate over .dll files in the mod folder
+// Check for new DLLs and load them
+void CheckAndLoadDlls(const std::string& modFolder = SHROUDTOPIA_MOD_FOLDER) {
+    // Load new DLLs
     for (const auto& entry : fs::directory_iterator(modFolder)) {
         if (entry.path().extension() == ".dll") {
             std::string dllPath = entry.path().string();
-            auto lastWriteTime = GetLastWriteTime(dllPath);
 
-            // Check if this mod is already loaded
             auto it = loadedDLLs.find(dllPath);
-            if (it != loadedDLLs.end()) {
-                // If the mod is already loaded, check if it has been updated
-                // // BROKEN
-                //if (it->second.lastModified < lastWriteTime) {
-                //   Utils::Log(Utils::DEBUG, std::string("Reloading updated mod: ".append(dllPath.append(std::endl;
-
-                //    // Unload the previous version
-                //    auto regIt = modContext->registeredMods.find(dllPath);
-                //    if (regIt != modContext->registeredMods.end())
-                //        if (regIt->second->loaded)
-                //            regIt->second->Unload(modContext);
-
-                //    UnloadDll(it->second);
-
-                //    // Load the new version
-                //    LoadAndRegisterMod(dllPath.c_str());
-
-                //    // Update the mod's last modified time
-                //    it->second.lastModified = lastWriteTime;
-                //}
-            }
-            else {
-                // If the mod is not loaded yet, load it
-                Utils::Log(Utils::DEBUG, std::string("Loading new mod: ").append(dllPath).c_str());
-
-                // Load and register the new mod
-                LoadAndRegisterMod(dllPath.c_str());
-
-                // Track the mod in the map
-                loadedDLLs[dllPath] = DllInfo{ LoadLibraryA(dllPath.c_str()), lastWriteTime };
+            if (it == loadedDLLs.end()) {
+                // Load new DLL
+                Utils::Log(Utils::DEBUG, std::string("Loading new DLL: ").append(dllPath).c_str());
+                LoadAndRegisterMod(dllPath);
+                loadedDLLs[dllPath] = LoadLibraryA(dllPath.c_str());
             }
         }
     }
+}
 
-    // Check if any mods were removed
-    for (auto it = loadedDLLs.begin(); it != loadedDLLs.end(); ) {
-        if (!fs::exists(it->first)) {
-           Utils::Log(Utils::DEBUG, std::string("Unloading removed mod: ").append(it->first).c_str());
-
-            // Unload the mod
-            auto regIt = modContext->registeredMods.find(it->first);
-            if (regIt != modContext->registeredMods.end())
-                if (regIt->second->loaded)
-                    regIt->second->Unload(modContext);
-            
-            UnloadDll(it->second);
-
-            // Remove it from the map
-            it = loadedDLLs.erase(it);
+// Load and update mods
+void UpdateMods() {
+    // Load unloaded mods
+    for (auto& [dllPath, regMod] : modContext->registeredMods) {
+        if (!regMod->loaded) {
+            ModMetaData modMeta = regMod->GetMetaData();
+            activeModName = modMeta.name;
+            if ((modContext->game.isServer && !modMeta.hasServerSupport) ||
+                (!modContext->game.isServer && !modMeta.hasClientSupport)) {
+                continue;
+            }
+            Utils::Log(Utils::INFO, std::string("Loading mod: ").append(modMeta.name).c_str());
+            regMod->Load(modContext);
+            regMod->loaded = true;
+            modContext->loadedMods.insert(regMod);
         }
-        else {
-            ++it;
+    }
+
+    // Update active mods
+    for (Mod* mod : modContext->loadedMods) {
+        ModMetaData meta = mod->GetMetaData();
+        activeModName = meta.name;
+        bool shouldBeActive = Config::modGet<bool>(meta.name.c_str(), "active", false);
+        if (shouldBeActive) {
+            if (!mod->active) {
+                Utils::Log(Utils::INFO, std::string("Activating mod: ").append(meta.name).c_str());
+                mod->Activate(modContext);
+            }
+            mod->Update(modContext);
+        }
+        else if (mod->active) {
+            Utils::Log(Utils::INFO, std::string("Deactivating mod: ").append(meta.name).c_str());
+            mod->Deactivate(modContext);
         }
     }
 }
@@ -131,131 +123,208 @@ json defaultConfig({
     });
 
 std::string GetExecutableFilename() {
-    char path[MAX_PATH];  // Buffer to hold the path
-
-    // Get the full path of the executable that loaded this DLL
+    char path[MAX_PATH];
     if (GetModuleFileNameA(NULL, path, MAX_PATH) > 0) {
-        return std::string(path);  // Convert the path to a std::string and return it
+        return std::string(path);
     }
-    else {
-        return std::string();  // Return an empty string if there was an error
-    }
+    return {};
 }
 
 bool IsRunningOnDedicatedServer() {
     auto filename = GetExecutableFilename();
-    Utils::Log(Utils::DEBUG, std::string("Is running in file: ").append(filename).c_str());
+    Utils::Log(Utils::DEBUG, std::string("Running in file: " + filename).c_str());
     bool onServer = (filename.find("_server.exe") != std::string::npos);
-    Utils::Log(Utils::DEBUG, std::string("Is running on server: ").append(std::to_string((int)onServer)).c_str());
+    Utils::Log(Utils::DEBUG, std::string("Running on server: " + std::to_string(onServer)).c_str());
     return onServer;
 }
 
-void UpdateMods() {
-    // Load unloaded registered mods
-    for (auto const& [dllPath, regMod] : modContext->registeredMods) {
-        if (regMod->loaded) continue;
-        if (modContext->loadedMods.find(regMod) == modContext->loadedMods.end()) {
-            ModMetaData modMeta = regMod->GetMetaData();
-            if (modContext->game.isServer) {
-                if (!modMeta.hasServerSupport) continue;
-            }
-            else {
-                if (!modMeta.hasClientSupport) continue;
-            }
-            regMod->Load(modContext);
-            regMod->loaded = true;
-            modContext->loadedMods.insert(regMod);
-        }
-    }
-
-    // Update loaded mods
-    for (auto* mod : modContext->loadedMods) {
-        ModMetaData meta = mod->GetMetaData();
-        // Update active value from config
-        bool shouldModBeActive = Config::modGet<bool>(meta.name.c_str(), "active", false);
-        if (shouldModBeActive) {
-            if (!mod->active) {
-                mod->Activate(modContext);
-            }
-            mod->Update(modContext);
-        }
-        else {
-            if (mod->active) {
-                mod->Deactivate(modContext);
-            }
-        }
-    }
-}
-
-void ThreadLoop()
-{
+// Thread for continuous DLL checking and mod updates
+void ThreadLoop() {
     Utils::Log(Utils::INFO, "Thread started.");
 
     if (!Config::readFile()) {
+        Utils::Log(Utils::WARN, "Config file not found, loading default configuration.");
         Config::setConfigFromJSON(defaultConfig);
         Config::writeFile();
     }
-    Utils::Log(Utils::INFO, "Config loaded.");
+    Utils::Log(Utils::INFO, "Configuration loaded.");
 
-    try {
-        int bootDelay = Config::get<int>("bootDelay", 1000);
+    int bootDelay = Config::get<int>("bootDelay", 1000);
+    Utils::Log(Utils::INFO, std::string("Boot delay set to: ").append(std::to_string(bootDelay)).append(" ms").c_str());
+    std::this_thread::sleep_for(std::chrono::milliseconds(bootDelay));
 
-        Utils::Log(Utils::INFO, std::string("Wait before injection. Configured boot delay is ").append(std::to_string(bootDelay)).append("ms.").c_str());
-        std::this_thread::sleep_for(std::chrono::milliseconds(bootDelay));
-    }
-    catch (const std::exception& e) {
-        Utils::Log(Utils::INFO, std::string("Exception occurred: ").append(e.what()).c_str());
-    }
-    catch (...) {
-        Utils::Log(Utils::INFO, "An unknown error occurred.");
-    }
-
-    while (true)
-    {
+    while (true) {
         Config::reloadIfChanged();
         if (Config::get<bool>("active", false)) {
-            CheckAndReloadDlls();
+            CheckAndLoadDlls();
             UpdateMods();
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(Config::get<int>("updateDelay", 500)));
     }
 }
 
-BOOL APIENTRY DllMain(HMODULE hModule,
-                      DWORD ul_reason_for_call,
-                      LPVOID lpReserved)
-{
+void ModLog(const char* msg) {
+    Utils::Log(Utils::INFO, std::string("(").append(activeModName).append(") ").append(msg).c_str());
+}
+
+// Mod Context Wrapper functions
+void ModContext_Log(const char* msg) {
+    ModLog(msg);
+}
+
+bool ModContext_WriteToReadOnlyMemory(LPVOID targetAddress, LPVOID data, SIZE_T size) {
+    try {
+        Mem::MemoryProtector protector(targetAddress, size);
+        if (!protector.changeProtection(PAGE_EXECUTE_READWRITE)) {
+            ModContext_Log("Failed to change protection");
+            return false;
+        }
+
+        SIZE_T bytesWritten;
+        if (!WriteProcessMemory(GetCurrentProcess(), targetAddress, data, size, &bytesWritten) || bytesWritten != size) {
+            protector.restoreProtection();
+            return false;
+        }
+        return protector.restoreProtection();
+    }
+    catch (const std::exception& ex) {
+        ModContext_Log("Failed to write to read-only memory");
+        return false;
+    }
+}
+
+uintptr_t ModContext_FindPattern(const char* pattern, const char* mask, uintptr_t start, size_t length) {
+    try {
+        return Mem::FindPattern(pattern, mask, start, length);
+    }
+    catch (const std::exception& ex) {
+        ModContext_Log("Error finding pattern");
+    }
+    return 0;
+}
+
+bool ModContext_Write(uintptr_t address, const void* buffer, size_t size) {
+    try {
+        return Mem::Write(address, buffer, size);
+    }
+    catch (const std::exception& ex) {
+        ModContext_Log("Error during write");
+        return false;
+    }
+}
+
+bool ModContext_Read(uintptr_t address, void* buffer, size_t size) {
+    try {
+        return Mem::Read(address, buffer, size);
+    }
+    catch (const std::exception& ex) {
+        ModContext_Log("Error during read");
+        return false;
+    }
+}
+
+void ModContext_WriteJump(LPVOID target, LPVOID destination) {
+    try {
+        Mem::WriteJump(target, destination);
+    }
+    catch (const std::exception& ex) {
+        ModContext_Log("Failed to write jump");
+    }
+}
+
+LPVOID ModContext_AllocateMemoryNearAddress(LPVOID address, SIZE_T dwSize) {
+    try {
+        return Mem::AllocateMemoryNearAddress(address, dwSize);
+    }
+    catch (const std::exception& ex) {
+        ModContext_Log("Memory allocation error");
+        return nullptr;
+    }
+}
+
+uintptr_t ModContext_GetModuleBaseAddress(const std::string& moduleName) {
+    try {
+        return Mem::GetModuleBaseAddress(moduleName);
+    }
+    catch (const std::exception& ex) {
+        ModContext_Log("Error retrieving module base address");
+        return 0;
+    }
+}
+
+bool ModContext_ApplyPatch(uintptr_t address, uint8_t* opcode, size_t opcodeSize) {
+    try {
+        Mem::Patch patch(address, opcode, opcodeSize);
+        return patch.apply();
+    }
+    catch (const std::exception& ex) {
+        ModContext_Log("Failed to apply patch");
+        return false;
+    }
+}
+
+bool ModContext_InjectShellcode(uint8_t* opcode, size_t opcodeSize, uintptr_t nearAddr = 0, uintptr_t* injectedAt = nullptr) {
+    Mem::Shellcode shellcode(opcode, opcodeSize, nearAddr);
+    if (injectedAt) *injectedAt = shellcode.data->address;
+    if (shellcode.inject()) {
+        ModLog(std::string("Successfully injected shellcode at address: ").append(std::to_string(shellcode.data->address)).c_str());
+    }
+    else {
+        ModLog("Failed to inject shellcode");
+    }
+}
+
+bool ModContext_CreateDetour(LPVOID targetFunction, LPVOID detourFunction, void** trampoline = nullptr) {
+    //Mem::Detour detour((uintptr_t)targetFunction, detourFunction, true);
+    //if (!detour.activate()) {
+    //    ModLog("Failed to install detour");
+    //    return false;
+    //}
+    //if (trampoline) *trampoline = detour.originalFunction;
+    //ModLog("Successfully installed detour");
+    return true;
+}
+
+// Entry point for the DLL
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
     if (!modContext) {
+        Utils::Log(Utils::INFO, "Initializing ModContext.");
         bool onServer = IsRunningOnDedicatedServer();
         modContext = new ModContext({
-            {
-                VERSION,
-                CONFIG_FILE,
-                LOG_FILE,
-                MOD_FOLDER,
-            },
-            {
-                "SVN HERE",
-                !onServer,
-                onServer
-            },
+            { SHROUDTOPIA_VERSION, SHROUDTOPIA_CONFIG_FILE, SHROUDTOPIA_LOG_FILE, SHROUDTOPIA_MOD_FOLDER },
+            { "SVN HERE", !onServer, onServer },
             {
                 [](const char* modKey, const char* key, bool defaultValue = false) { return Config::modGet<bool>(modKey, key, defaultValue); },
                 [](const char* modKey, const char* key, const std::string& defaultValue = "") { return Config::modGet<std::string>(modKey, key, defaultValue); },
                 [](const char* modKey, const char* key, int defaultValue = 0) { return Config::modGet<int>(modKey, key, defaultValue); },
                 [](const char* modKey, const char* key, float defaultValue = 0.0f) { return Config::modGet<float>(modKey, key, defaultValue); }
             },
-            [=](std::string msg) { Utils::Log(Utils::INFO, msg.c_str()); }
-        });
+            {
+                ModContext_WriteToReadOnlyMemory,
+                ModContext_FindPattern,
+                ModContext_Write,
+                ModContext_Read,
+                ModContext_WriteJump,
+                ModContext_AllocateMemoryNearAddress,
+                ModContext_GetModuleBaseAddress,
+                ModContext_ApplyPatch,
+                ModContext_InjectShellcode,
+                ModContext_CreateDetour
+            },
+            ModContext_Log
+            });
     }
-    switch (ul_reason_for_call)
-    {
+
+    switch (ul_reason_for_call) {
     case DLL_PROCESS_ATTACH:
+        Utils::Log(Utils::INFO, "DLL process attach.");
         std::thread(ThreadLoop).detach();
         break;
     case DLL_THREAD_ATTACH:
     case DLL_THREAD_DETACH:
+        break;
     case DLL_PROCESS_DETACH:
+        Utils::Log(Utils::INFO, "DLL process detach.");
         break;
     }
     return TRUE;
