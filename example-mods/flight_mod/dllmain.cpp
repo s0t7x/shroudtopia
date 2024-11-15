@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include <shroudtopia.h>
-#include <mem.h>
+#include <memory_utils.h>
 
 ModMetaData metaData = {
     "Flight Mod",
@@ -21,8 +21,9 @@ class FlightMod : public Mod
 public:
     void Load(ModContext* modContext)
     {
-        const char* pattern = "\xF3\x0F\x10\x05\x00\x00\x00\x00\x77";
-        const char* mask = "xxxx????x";
+        // F3 0F 10 05 ? ? ? ? ? ? ? ? F2 0F 11 4C 24 60
+        const char* pattern = "\xF3\x0F\x10\x05\x00\x00\x00\x00\xF2\x0F\x11\x4C\x24\x60";
+        const char* mask = "xxxx????xxxxxx";
 
         uintptr_t baseAddress = (uintptr_t)GetModuleHandle(NULL);
         uintptr_t address = Mem::FindPattern(pattern, mask, baseAddress, 0x1000000); // Scan 16MB
@@ -34,7 +35,7 @@ public:
                 0xE9, 0x00, 0x00, 0x00, 0x00,
                 0xc3, 0xf5, 0xc8, 0xbf };
             mod = new Mem::Detour(address, modCode, sizeof(modCode), false, 3);
-            mod->shellcode->updateValue<uint32_t>(9, (uint32_t)(mod->patch->data->address + mod->patch->data->size) - ((uint32_t)((uintptr_t)mod->shellcode->data->address + mod->shellcode->data->size - 4)));
+            mod->shellcode->updateValue<uint32_t>(9, (uint32_t)(mod->patch->data->address + mod->patch->data->size) - ((uint32_t)((uintptr_t)mod->shellcode->data->address + mod->shellcode->data->size - 7)));
         }
     }
 

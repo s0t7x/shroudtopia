@@ -36,6 +36,19 @@ struct ModContext {
         std::function<int(const char* modKey, const char* key, int defaultValue)> GetInt;
         std::function<float(const char* modKey, const char* key, float defaultValue)> GetFloat;
     } config;
+    struct {
+        std::function<bool(LPVOID targetAddress, LPVOID data, SIZE_T size)> WriteToReadOnlyMemory;
+        std::function<uintptr_t(const char* pattern, const char* mask, uintptr_t start, size_t length)> FindPattern;
+        std::function<bool(uintptr_t address, const void* buffer, size_t size)> Write;
+        std::function<bool(uintptr_t address, void* buffer, size_t size)> Read;
+        std::function<void(LPVOID target, LPVOID destination)> WriteJump;
+        std::function<LPVOID(LPVOID address, SIZE_T dwSize)> AllocateMemoryNearAddress;
+        std::function<uintptr_t(const std::string& moduleName)> GetModuleBaseAddress;
+        std::function<bool(uintptr_t address, uint8_t* opcode, size_t opcodeSize)> ApplyPatch;
+        std::function<bool(uint8_t* opcode, size_t opcodeSize, uintptr_t nearAddr, uintptr_t* injectedAt)> InjectShellcode;
+        std::function<bool(LPVOID targetFunction, LPVOID detourFunction, void** trampoline)> CreateDetour;
+    } memory;
+
 
     std::function<void(const char *)> Log;
 

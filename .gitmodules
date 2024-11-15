@@ -1,0 +1,12 @@
+[submodule "third-party/GuardDetour"]
+	path = third-party/GuardDetour
+	url = https://github.com/gravit0/GuardDetour
+[submodule "third-party/funchook"]
+	path = third-party/funchook
+	url = https://github.com/kubo/funchook
+[submodule "third-party/distorm"]
+	path = third-party/distorm
+	url = https://github.com/gdabah/distorm/
+[submodule "third-party/nlohmann-json"]
+	path = third-party/nlohmann-json
+	url = https://github.com/nlohmann/json

@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include <shroudtopia.h>
-#include <mem.h>
+#include <memory_utils.h>
 
 #define LOG_CLASS(msg) modContext->Log(std::string(typeid(*this).name()).append(msg).c_str())
 
@@ -66,7 +66,7 @@ public:
 			uint8_t modCode[] = {
 				0x53,                               // push rbx
 				0x8B, 0x5C, 0x81, 0x08,             // mov ebx, [rcx+rax*4+8]
-				0x89, 0x1C, 0x81,                   // mov [rcx+rax*4], ebx
+				0x89, 0x5C, 0x81, 0xFC,             // mov [rcx+rax*4-4], ebx
 				0x5B,                               // pop rbx
 				0x8B, 0x04, 0x81,                   // mov eax, [rcx+rax*4]
 				0x89, 0x44, 0x24, 0x3C,             // mov [rsp+3C], eax
@@ -92,8 +92,8 @@ public:
 	NoFallDamage(ModContext* modContext) : _Mod(modContext)
 	{
 		// Pattern matching the AOB scan for the original code in the target process.
-		const char* pattern = "\x89\x04\x91\x48\x8D\x4D\xE0";
-		const char* mask = "xxxxxxx";
+		const char* pattern = "\x89\x04\x91\x48\x8D\x4D";
+		const char* mask = "xxxxxx";
 
 		// Base address of the module (the game).
 		uintptr_t baseAddress = (uintptr_t)GetModuleHandle(NULL);

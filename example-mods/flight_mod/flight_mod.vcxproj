@@ -75,7 +75,7 @@
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\mods\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(SolutionDir)\shroudtopia;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)\include;$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\mods\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

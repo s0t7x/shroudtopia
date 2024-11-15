@@ -4,6 +4,8 @@
 #include <sstream>
 #include <iomanip>
 #include <cstdio>
+#include <chrono>
+#include <ctime>
 
 #include "defines.h"
 
@@ -11,12 +13,13 @@
 
 #define LOG_CLASS(msg) Utils::LogClass(typeid(*this).name(), msg)
 
-
 namespace Utils
 {
     enum LogLevel {
         NONE,
         INFO,
+        WARN,
+        ERRR,
         DEBUG,
         VERBOSE
     };
@@ -29,6 +32,8 @@ namespace Utils
         LogLevel currentLogLevel = INFO;
         if (llStr == "NONE") currentLogLevel = NONE;
         else if (llStr == "DEBUG") currentLogLevel = DEBUG;
+        else if (llStr == "WARN") currentLogLevel = WARN;
+        else if (llStr == "ERROR") currentLogLevel = ERRR;
         else if (llStr == "VERBOSE") currentLogLevel = VERBOSE;
 
         if (level > currentLogLevel) {
@@ -37,14 +42,20 @@ namespace Utils
 
         std::string levelString;
         switch (level) {
-        case DEBUG:
-            levelString = "DEBUG";
-            break;
-        case VERBOSE:
-            levelString = "VERBOSE";
-            break;
         case INFO:
             levelString = "INFO";
+            break;
+        case WARN:
+            levelString = "WARN";
+            break;
+        case ERRR:
+            levelString = "ERRR";
+            break;
+        case DEBUG:
+            levelString = "DEBG";
+            break;
+        case VERBOSE:
+            levelString = "VERB";
             break;
         }
 
@@ -63,10 +74,19 @@ namespace Utils
         va_end(args);
 
         // Open log file in append mode
-        std::ofstream log("log.txt", std::ios_base::app | std::ios_base::out);
+        std::ofstream log(SHROUDTOPIA_LOG_FILE, std::ios_base::app | std::ios_base::out);
+
+        auto start = std::chrono::system_clock::now();
+        auto legacyStart = std::chrono::system_clock::to_time_t(start);
+        char timeString[std::size("yyyy-mm-ddThh:mm:ssZ")];
+        std::tm tm;
+        gmtime_s(&tm, &legacyStart);
+        std::strftime(std::data(timeString), std::size(timeString),
+            "%FT%TZ", &tm);
 
         // Log to the file and console
-        log << "[shroudtopia][" << levelString << "] " << buffer << "\n";
+        log << "[" << timeString << "]" << "[shroudtopia][" << levelString << "] " << buffer << "\n";
+
         std::cout << "[shroudtopia][" << levelString << "] " << buffer << std::endl;
     }
 

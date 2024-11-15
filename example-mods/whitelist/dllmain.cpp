@@ -1,8 +1,6 @@
 #include "pch.h"
 
 #include <shroudtopia.h>
-#include <mem.h>
-
 #include <cstdio>
 #include <string>
 
@@ -43,156 +41,83 @@ const char* FormatString(const char* format, ...) {
     return result.c_str(); // Return a pointer to the internal C-string
 }
 
-typedef int (*GetSteamID_t)(); // Define the original function type
-GetSteamID_t originalGetSteamID = nullptr;
+typedef unsigned short uint16;
+typedef unsigned int uint32;
+typedef unsigned long long uint64;
 
-uint8_t originalBytes[23];
-BYTE* trampoline = nullptr; // To store the trampoline code
+class ISteamGameServer; // Forward declaration
+typedef ISteamGameServer* (__cdecl* SteamGameServer_t)();
 
-void CreateTrampoline(uintptr_t address, ModContext* modContext) {
-    DWORD oldProtect;
-    VirtualProtect((LPVOID)address, 23, PAGE_EXECUTE_READWRITE, &oldProtect);
+class ISteamGameServer {
+public:
+    virtual bool HandleIncomingPacket(const void* pData, int cbData, uint32 srcIP, uint16 srcPort) = 0;
+    // Add other methods as needed...
+};
 
-    modContext->Log("GetSteamID: Saving original function");
-    // Copy the original bytes to trampoline
-    memcpy(originalBytes, (void*)address, 23);
-
-    // Calculate the address after the jump instruction
-    modContext->Log("GetSteamID: Allocate trampoline");
-    trampoline = (BYTE*)VirtualAlloc(0, 23, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-
-    modContext->Log("GetSteamID: Move original function to trampoline");
-    // Copy the original bytes to trampoline
-    memcpy(trampoline, originalBytes, 23);
-
-    //modContext->Log("GetSteamID: Write jmp back");
-    //// Write a jump back to the original code execution after the original function
-    //Mem::WriteJump((LPVOID)((DWORD)trampoline + 23), (LPVOID)((DWORD)address + 23 - 1));
-
-    VirtualProtect((LPVOID)address, 23, oldProtect, &oldProtect);
-}
-
-// Our custom GetSteamID function
-extern "C" __declspec(dllexport) uint64_t __stdcall HookedGetSteamID()
-{
-    _modContext->Log("GetSteamID has been called!");
-
-    uint64_t steamId = ((GetSteamID_t)trampoline)(); // Call the original function
-
-    _modContext->Log(FormatString("Retrieved Steam ID: %i", steamId));
-
-    return steamId; // Return the original Steam ID
-}
-
-void UnhookGetSteamID() {
-    // Check if we have a valid address for GetSteamID
-    if (originalGetSteamID != nullptr) {
-        // Restore the original bytes at the hooked address
-        DWORD oldProtect;
-        VirtualProtect((LPVOID)(uintptr_t)originalGetSteamID, 23, PAGE_EXECUTE_READWRITE, &oldProtect);
-
-        // Write back the original bytes
-        Mem::Write((uintptr_t)originalGetSteamID, originalBytes, sizeof(originalBytes));
-
-        // Restore the original protection
-        VirtualProtect((LPVOID)(uintptr_t)originalGetSteamID, 23, oldProtect, &oldProtect);
-
-        // Free the allocated trampoline memory if it was created
-        if (trampoline != nullptr) {
-            VirtualFree(trampoline, 0, MEM_RELEASE);
-            trampoline = nullptr;
-        }
-        // Reset the original function pointer
-        originalGetSteamID = nullptr;
-    }
-}
-
-void HookGetSteamID(uintptr_t getSteamIDAddress, ModContext* modContext) {
-    Mem::Read(getSteamIDAddress, originalBytes, sizeof(originalBytes));
-
-    // Store the original function pointer
-    originalGetSteamID = (GetSteamID_t)(getSteamIDAddress);
-
-    modContext->Log(FormatString("originalGetSteamID: %x", originalGetSteamID));
-
-    CreateTrampoline(getSteamIDAddress, modContext);
-
-    // Write the jump to our hooked function
-    Mem::WriteJump((LPVOID)getSteamIDAddress, (LPVOID)HookedGetSteamID);
-}
-
-uintptr_t GetModuleBaseAddress(const std::string& moduleName, ModContext* modContext) {
-    // Get a handle to the current process
-    HANDLE hProcess = GetCurrentProcess();
-
-    // Get the list of all modules in the current process
-    HMODULE hModules[1024];
-    DWORD cbNeeded;
-
-    if (EnumProcessModules(hProcess, hModules, sizeof(hModules), &cbNeeded)) {
-        // Iterate through the modules to find the one matching the name
-        for (unsigned int i = 0; i < (cbNeeded / sizeof(HMODULE)); i++) {
-            char szModName[MAX_PATH];
-            if (GetModuleFileNameExA(hProcess, hModules[i], szModName, sizeof(szModName) / sizeof(char))) {
-                // Convert to std::string
-                std::string fullPath(szModName);
-                // Compare the module name only (case insensitive)
-                std::string lowerModuleName = moduleName;
-                std::transform(lowerModuleName.begin(), lowerModuleName.end(), lowerModuleName.begin(), ::tolower);
-                std::transform(fullPath.begin(), fullPath.end(), fullPath.begin(), ::tolower);
-
-                if (fullPath.find(lowerModuleName) != std::string::npos) {
-                    MODULEINFO moduleInfo;
-                    if (GetModuleInformation(hProcess, hModules[i], &moduleInfo, sizeof(moduleInfo))) {
-                        return reinterpret_cast<uintptr_t>(moduleInfo.lpBaseOfDll); // Return the actual base address
-                    }
-                }
-            }
-        }
-    }
-
-    return 0; // Module not found
-}
+typedef bool (*HandleIncomingPacket_t)(const void* pData, int cbData, uint32 srcIP, uint16 srcPort);
 
 // Signature for GameVersion (SVN) 55812
 class Whitelist : public Mod
-{
+{   
+    HMODULE hSteamAPI;
     uintptr_t getSteamIDAddress;
+    void* originalGetSteamId = nullptr;
+    HandleIncomingPacket_t originalHandleIncomingPacket = nullptr;
+
+    std::function<uint64_t()> hookedGetSteamId = [=]()->uint64_t {
+        _modContext->Log("Log from hooked GetSteamId");
+        return originalGetSteamId ? ((uintptr_t (*)(void))originalGetSteamId)() : 0;
+    };
+
 public:
     void Load(ModContext* modContext)
     {
         _modContext = modContext;
-        //  48 83 EC 28 48 8B 01 48 8D 54 24 30 FF 50 10 48 8B 00 48 83 C4 28
-        const char* pattern = "\x48\x83\xEC\x28\x48\x8B\x01\x48\x8D\x54\x24\x30\xFF\x50\x10\x48\x8B\x00\x48\x83\xC4\x28";
-        const char* mask = "xxxxxxxxxxxxxxxxxxxxxx";
 
-        uintptr_t steamApiBase = GetModuleBaseAddress("steam_api64.dll", modContext);
-        getSteamIDAddress = steamApiBase ? steamApiBase + 0x29A0 : Mem::FindPattern(pattern, mask, 0x0, 0x7FFFFFFFF);
+        hSteamAPI = LoadLibraryA("steam_api.dll");
+        if (!hSteamAPI) {
+            _modContext->Log("Failed to load steam_api.dll");
+            return;
+        }
 
-        modContext->Log(FormatString("Address of GetSteamID: %x", getSteamIDAddress));
+        // Get function pointers
+        SteamGameServer_t SteamGameServer = (SteamGameServer_t)GetProcAddress(hSteamAPI, "SteamGameServer");
+
+        if (!SteamGameServer) {
+            _modContext->Log("Failed to get function pointer");
+            FreeLibrary(hSteamAPI);
+            return;
+        }
+
+        // Get ISteamGameServer instance
+        ISteamGameServer* gameServer = SteamGameServer();
+        if (!gameServer) {
+            _modContext->Log("Failed to get ISteamGameServer instance");
+            FreeLibrary(hSteamAPI);
+            return;
+        }
+
+        uintptr_t** vtable = reinterpret_cast<uintptr_t**>(gameServer);
+        originalHandleIncomingPacket = reinterpret_cast<HandleIncomingPacket_t>((*vtable)[YOUR_FUNCTION_INDEX]);
+
+        getSteamIDAddress = (uintptr_t)&gameServer->HandleIncomingPacket;
     }
 
     void Unload(ModContext* modContext) {
+        // Free the DLL
+        FreeLibrary(hSteamAPI);
     }
 
     void Activate(ModContext* modContext) {
-        if (getSteamIDAddress && originalGetSteamID == nullptr)
-        {
-            HookGetSteamID(getSteamIDAddress, modContext);
-            modContext->Log("Hooked GetSteamID for whitlisting");
-            active = true;
-        }
-        else {
-            modContext->Log(FormatString("Cannot hook GetSteamID. GetSteamID Adress is %x", getSteamIDAddress));
+        if (getSteamIDAddress && !active) {
+            active = modContext->memory.CreateDetour((LPVOID)getSteamIDAddress, &hookedGetSteamId, &originalGetSteamId);
         }
     }
 
     void Deactivate(ModContext* modContext) {
-        if (getSteamIDAddress && originalGetSteamID != nullptr) {
-            UnhookGetSteamID();
-            modContext->Log("Unhooked GetSteamID and removed whitlisting");
+        if (originalGetSteamId && active) {
+            active = !modContext->memory.CreateDetour((LPVOID)getSteamIDAddress, &originalGetSteamId, nullptr);
         }
-            active = false;
     }
 
     void Update(ModContext* modContext) { }

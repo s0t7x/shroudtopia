@@ -1,10 +1,10 @@
 #pragma once
 #include <fstream>
 #include <filesystem>
+#include <chrono>
+
 #include "pch.h"
 #include "defines.h"
-
-#include "nlohmannjson.hpp"
 
 using json = nlohmann::json;
 
@@ -16,11 +16,11 @@ public:
     inline static bool readFile()
     {
         try {
-            std::ifstream configFile(CONFIG_FILE);
+            std::ifstream configFile(SHROUDTOPIA_CONFIG_FILE);
             if (configFile.is_open())
             {
                 configFile >> jConfig;
-                lastModifiedTime = std::filesystem::last_write_time(CONFIG_FILE);
+                lastModifiedTime = std::filesystem::last_write_time(SHROUDTOPIA_CONFIG_FILE);
                 return true;
             }
             return false;
@@ -75,7 +75,7 @@ public:
 
     inline static bool writeFile()
     {
-        std::ofstream configFile(CONFIG_FILE);
+        std::ofstream configFile(SHROUDTOPIA_CONFIG_FILE);
         if (configFile.is_open())
         {
             // Write pretty-printed JSON to file
@@ -94,7 +94,7 @@ public:
     inline static bool hasFileChanged()
     {
         try {
-            auto currentModifiedTime = std::filesystem::last_write_time(CONFIG_FILE);
+            auto currentModifiedTime = std::filesystem::last_write_time(SHROUDTOPIA_CONFIG_FILE);
             return currentModifiedTime != lastModifiedTime;
         }
         catch (std::exception err) {

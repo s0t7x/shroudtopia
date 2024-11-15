@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include <shroudtopia.h>
-#include <mem.h>
+#include <memory_utils.h>
 
 ModMetaData metaData = {
     "BuildCam",
