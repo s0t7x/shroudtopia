@@ -14,7 +14,7 @@ ModMetaData metaData = {
 };
 
 
-// Signature for GameVersion (SVN) 55812
+// Signature for GameVersion (SVN) 602428
 class FlightMod : public Mod
 {
     Mem::Detour* mod;

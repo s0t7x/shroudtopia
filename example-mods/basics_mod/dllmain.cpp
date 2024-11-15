@@ -15,7 +15,7 @@ ModMetaData metaData = {
 	true,
 };
 
-// Signature for GameVersion (SVN) 55812
+// Signature for GameVersion (SVN) 602428
 class _Mod {
 public:
 	ModContext* modContext;

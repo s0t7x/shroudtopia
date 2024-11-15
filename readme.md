@@ -5,7 +5,7 @@ Shroudtopia
 <b>Modloader for Enshrouded (Server & Client))</b>
 </p>
 <p align="center">
-<img alt="Static Badge" src="https://img.shields.io/badge/Game%20Version%20(SVN)-558123-blue">
+<img alt="Static Badge" src="https://img.shields.io/badge/Game%20Version%20(SVN)-602428-blue">
 </p>
 
 I'm excited to introduce **Shroudtopia**, a modloader that allows easy management and integration of mods for Enshrouded. With Shroudtopia, you can dynamically load, activate, and deactivate mods without restarting, giving you the ultimate flexibility to enhance gameplay.
