@@ -21,9 +21,9 @@ class FlightMod : public Mod
 public:
     void Load(ModContext* modContext)
     {
-        // F3 0F 10 05 ? ? ? ? ? ? ? ? F2 0F 11 4C 24 60
-        const char* pattern = "\xF3\x0F\x10\x05\x00\x00\x00\x00\xF2\x0F\x11\x4C\x24\x60";
-        const char* mask = "xxxx????xxxxxx";
+        // F3 0F 10 05 ?? ?? ?? ?? F2 0F 11 4C 24 60
+        const char* pattern = "\xF3\x0F\x10\x05";
+        const char* mask = "xxxx";
 
         uintptr_t baseAddress = (uintptr_t)GetModuleHandle(NULL);
         uintptr_t address = Mem::FindPattern(pattern, mask, baseAddress, 0x1000000); // Scan 16MB

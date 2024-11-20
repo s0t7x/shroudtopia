@@ -132,6 +132,82 @@ public:
 	}
 };
 
+class InfiniteItemUse : public _Mod
+{
+public:
+	Mem::Detour* free_ItemUseMod2 = nullptr;
+
+	InfiniteItemUse(ModContext* modContext) : _Mod(modContext)
+	{
+		// AOB patterns for the original code in the target process.
+		const char* pattern1 = "\x49\x89\x0E\x41\x2B"; // First AOB
+		const char* pattern2 = "\x45\x29\x7E\x04\x41\x2B\xEF"; // Second AOB
+
+		// Base address of the module (the game).
+		uintptr_t baseAddress = (uintptr_t)GetModuleHandle(NULL);
+
+		// Find the patterns within the game memory (scans within 16MB).
+		uintptr_t address1 = Mem::FindPattern(pattern1, "xxxxx", baseAddress, 0xF0000000);
+		uintptr_t address2 = Mem::FindPattern(pattern2, "xxxxxxx", baseAddress, 0xF0000000);
+
+		// Check if both addresses were found.
+		if (address1 && address2)
+		{
+			// Allocate memory for new instructions to be injected at address1.
+			uint8_t modCode1[] = {
+				0x41, 0xBF, 0x00, 0x00, 0x00, 0x00, 0xBD, 0x00, 0x00, 0x00, 0x00, 0xE9, 0x00, 0x00, 0x00, 0x00
+			};
+
+			// Creating the detour for the first address.
+			mod = new Mem::Detour(address1, modCode1, sizeof(modCode1), false, 1);
+
+			// Calculate the jump address for the first detour.
+			mod->shellcode->updateValue<uint32_t>(
+				sizeof(modCode1) - 4, (uint32_t)(mod->patch->data->address + mod->patch->data->size)
+				- ((uint32_t)((uintptr_t)mod->shellcode->data->address
+					+ mod->shellcode->data->size))
+			);
+
+			// Allocate memory for new instructions to be injected at address2.
+			uint8_t modCode2[] = {
+				0x41, 0xBF, 0x00, 0x00, 0x00, 0x00, 0xBD, 0x00, 0x00, 0x00, 0x00, 0xE9, 0x00, 0x00, 0x00, 0x00
+			};
+
+			// Creating the detour for the second address.
+			free_ItemUseMod2 = new Mem::Detour(address2, modCode2, sizeof(modCode2), false, 2);
+
+			// Calculate the jump address for the second detour.
+			free_ItemUseMod2->shellcode->updateValue<uint32_t>(
+				sizeof(modCode2) - 4, (uint32_t)(free_ItemUseMod2->patch->data->address + free_ItemUseMod2->patch->data->size)
+				- ((uint32_t)((uintptr_t)free_ItemUseMod2->shellcode->data->address
+					+ free_ItemUseMod2->shellcode->data->size))
+			);
+		}
+	}
+
+	// Activates the Infinite Item Use mod.
+	void activate()
+	{
+		mod->activate();
+		free_ItemUseMod2->activate();
+		active = mod->active && free_ItemUseMod2->active;
+		if (active)
+			LOG_CLASS("Activated");
+		else
+			LOG_CLASS("Failed to activate");
+	}
+
+	// Deactivates the Infinite Item Use mod.
+	void deactivate()
+	{
+		mod->deactivate();
+		free_ItemUseMod2->deactivate();
+		active = false;
+		LOG_CLASS("Deactivated");
+	}
+};
+
+// Unpatched
 class NoCraftCost : public _Mod
 {
 public:
@@ -169,86 +245,6 @@ public:
 		}
 	}
 };
-
-class InfiniteItemUse : public _Mod
-{
-public:
-	Mem::Detour* free_ItemUseMod2 = nullptr;
-
-	InfiniteItemUse(ModContext* modContext) : _Mod(modContext)
-	{
-		// AOB patterns for the original code in the target process.
-		const char* pattern1 = "\x45\x29\x7E\x04\x41\x2B\xEF"; // First AOB
-		const char* pattern2 = "\x33\xC9\x49\x89\x0E";        // Second AOB
-
-		// Base address of the module (the game).
-		uintptr_t baseAddress = (uintptr_t)GetModuleHandle(NULL);
-
-		// Find the patterns within the game memory (scans within 16MB).
-		uintptr_t address1 = Mem::FindPattern(pattern1, "xxxxxxx", baseAddress, 0xF0000000);
-		uintptr_t address2 = Mem::FindPattern(pattern2, "xxxxx", baseAddress, 0xF0000000);
-
-		// Check if both addresses were found.
-		if (address1 && address2)
-		{
-			// Allocate memory for new instructions to be injected at address1.
-			uint8_t modCode1[] = {
-				0x49, 0x83, 0xFB, 0x01, 0x0F, 0x85, 0x08, 0x00, 0x00, 0x00, 0x44, 0x29, 0xFD, 0xE9, 0x00, 0x00, 0x00, 0x00
-			};
-
-			// Creating the detour for the first address.
-			mod = new Mem::Detour(address1, modCode1, sizeof(modCode1), false, 2);
-
-			// Calculate the jump address for the first detour.
-			mod->shellcode->updateValue<uint32_t>(
-				sizeof(modCode1) - 4, (uint32_t)(mod->patch->data->address + mod->patch->data->size)
-				- ((uint32_t)((uintptr_t)mod->shellcode->data->address
-					+ mod->shellcode->data->size))
-			);
-
-			// Allocate memory for new instructions to be injected at address2.
-			uint8_t modCode2[] = {
-				0x31, 0xC9,              // xor ecx, ecx
-				0x49, 0x83, 0xFB, 0x01,
-				0x0F, 0x84, 0x03, 0x00, 0x00, 0x00,
-				0x49, 0x89, 0x0E,
-				0xE9, 0x00, 0x00, 0x00, 0x00 // jmp
-			};
-
-			// Creating the detour for the second address.
-			free_ItemUseMod2 = new Mem::Detour(address2, modCode2, sizeof(modCode2), false);
-
-			// Calculate the jump address for the second detour.
-			free_ItemUseMod2->shellcode->updateValue<uint32_t>(
-				sizeof(modCode2) - 4, (uint32_t)(free_ItemUseMod2->patch->data->address + free_ItemUseMod2->patch->data->size)
-				- ((uint32_t)((uintptr_t)free_ItemUseMod2->shellcode->data->address
-					+ free_ItemUseMod2->shellcode->data->size - 4))
-			);
-		}
-	}
-
-	// Activates the Infinite Item Use mod.
-	void activate()
-	{
-		mod->activate();
-		free_ItemUseMod2->activate();
-		active = mod->active && free_ItemUseMod2->active;
-		if (active)
-			LOG_CLASS("Activated");
-		else
-			LOG_CLASS("Failed to activate");
-	}
-
-	// Deactivates the Infinite Item Use mod.
-	void deactivate()
-	{
-		mod->deactivate();
-		free_ItemUseMod2->deactivate();
-		active = false;
-		LOG_CLASS("Deactivated");
-	}
-};
-
 // BROKEN! Actually does opposite of what it should... :(
 class BypassWorldBorders : public _Mod
 {
@@ -305,7 +301,7 @@ public:
 		LOG_CLASS("Deactivated BypassWorldBorders");
 	}
 };
-
+// Unpatched
 class BypassAltarLimit : public _Mod
 {
 public:
@@ -403,17 +399,19 @@ public:
 		else if (!noFallDamageEnabled && noFallDamage->active)
 			noFallDamage->deactivate();
 
-		bool noCraftCostEnabled = modContext->config.GetBool(modKey, "no_craft_cost", false);
-		if (noCraftCostEnabled && !noCraftCost->active)
-			noCraftCost->activate();
-		else if (!noCraftCostEnabled && noCraftCost->active)
-			noCraftCost->deactivate();
 
 		bool infiniteItemUseEnabled = modContext->config.GetBool(modKey, "inf_item_use", false);
 		if (infiniteItemUseEnabled && !infiniteItemUse->active)
 			infiniteItemUse->activate();
 		else if (!infiniteItemUseEnabled && infiniteItemUse->active)
 			infiniteItemUse->deactivate();
+
+	//	// Unpatched
+	/*	bool noCraftCostEnabled = modContext->config.GetBool(modKey, "no_craft_cost", false);
+		if (noCraftCostEnabled && !noCraftCost->active)
+			noCraftCost->activate();
+		else if (!noCraftCostEnabled && noCraftCost->active)
+			noCraftCost->deactivate();
 
 		bool bypassWorldBordersEnabled = modContext->config.GetBool(modKey, "bypass_world_borders", false);
 		if (bypassWorldBordersEnabled && !bypassWorldBorders->active)
@@ -425,8 +423,7 @@ public:
 		if (bypassAltarLimitEnabled && !bypassAltarLimit->active)
 			bypassAltarLimit->activate();
 		else if (!bypassAltarLimitEnabled && bypassAltarLimit->active)
-			bypassAltarLimit->deactivate();
-
+			bypassAltarLimit->deactivate();*/
 	}
 
 	ModMetaData GetMetaData() {
