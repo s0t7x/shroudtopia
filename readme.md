@@ -74,10 +74,12 @@ Each mod exposes its configuration options, which can be altered in `shroudtopia
 ## Example Mods
 
 - **Flight Mod:** Enjoy full flight capabilities with the glider. No more losing height!
+  
 ![Flight Mod](https://github.com/s0t7x/shroudtopia/blob/main/example-mods/flight_mod/demo.gif)
 
 
 - ~~**First Person View:** Play Enshrouded from another persepctive. Example for client-only mod.~~ **As I am focused on development for dedicated servers the First-Person-View Mod has not been updated since a few game versions and is untested!**
+  
 ![First Person View](https://github.com/s0t7x/shroudtopia/blob/main/example-mods/first_person_view/demo.gif)
 
 
