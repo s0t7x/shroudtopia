@@ -10,6 +10,22 @@
 <img alt="Static Badge" src="https://img.shields.io/badge/Game%20Version%20(SVN)-606779-blue">
 </p>
 
+<hr/>
+
+<h2>Unstable hotfixes:</h2>
+
+<p align="center">
+<b>This versions are highly unstable as turning any of the outdated mods on will crash the server / client.</b>
+</p>
+
+
+|svn|hotfix|
+|-|-|
+|<img alt="Static Badge" src="https://img.shields.io/badge/Game%20Version%20(SVN)-602428-orange">|<a href="https://github.com/s0t7x/shroudtopia/releases/tag/0.2-hotfix-unstable">https://github.com/s0t7x/shroudtopia/releases/tag/0.2-hotfix-unstable</a>|
+
+
+<hr/>
+
 I'm excited to introduce **Shroudtopia**, a modloader that allows easy management and integration of mods for Enshrouded. With Shroudtopia, you can dynamically load, activate, and deactivate mods without restarting, giving you the ultimate flexibility to enhance gameplay.
 
 
@@ -27,7 +43,7 @@ I'm excited to introduce **Shroudtopia**, a modloader that allows easy managemen
 4. **Mods Folder:** Create a `mods` folder if it doesn’t exist and place your mod DLLs inside.
 5. **Launch:** Start the server - a default config is generated if `shroudtopia.json` is absent.
 
-If Shroudtopia is loaded correctly, you should see something like this in the server console:
+On servers: If Shroudtopia is loaded correctly, you should see something like this in the server console:
 ```
 [shroudtopia][INFO] Config loaded.
 [shroudtopia][INFO] Wait before injection. Configured boot delay is 3000ms.
