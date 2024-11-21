@@ -1,11 +1,13 @@
-<h1><p align="center">
-Shroudtopia
-</p></h1>
 <p align="center">
-<b>Modloader for Enshrouded (Server & Client))</b>
+
+![Shroudtopia](https://github.com/s0t7x/shroudtopia/blob/main/header.gif)
+
 </p>
 <p align="center">
-<img alt="Static Badge" src="https://img.shields.io/badge/Game%20Version%20(SVN)-602428-blue">
+<b>Modloader for Enshrouded (Server & Client)</b>
+</p>
+<p align="center">
+<img alt="Static Badge" src="https://img.shields.io/badge/Game%20Version%20(SVN)-606779-blue">
 </p>
 
 I'm excited to introduce **Shroudtopia**, a modloader that allows easy management and integration of mods for Enshrouded. With Shroudtopia, you can dynamically load, activate, and deactivate mods without restarting, giving you the ultimate flexibility to enhance gameplay.
@@ -17,26 +19,13 @@ I'm excited to introduce **Shroudtopia**, a modloader that allows easy managemen
 - **Live Configuration**: Modify mod settings at runtime without restarting the server.
 - **Dependency Injection**: Each mod is fully integrated into the system via the `ModContext`, enabling shared access to configuration, logging, and other utilities.
 
-
-## Example Mods
-
-- **Flight Mod:** Enjoy full flight capabilities with the glider. No more losing height!
-![Flight Mod](https://github.com/s0t7x/shroudtopia/blob/main/flight_mod/demo.gif)
-
-
-- **First Person View:** Play Enshrouded from another persepctive. Example for client-only mod.
-![First Person View](https://github.com/s0t7x/shroudtopia/blob/main/first_person_view/demo.gif)
-
-
-- **BasicsMod:** Flight Mod is no fun with fall damage. All other legacy Shroudtopia features have been put into this mod. You can selectively activate them in the configuration file.
-
-
 ## Installation
 
-1. **Download:** Get the latest modloader binaries from the [release section](https://github.com/s0t7x/shroudtopia/releases).
+1. **Download Mod Loader:** Get the latest Shroudtopia binaries from the [release section](https://github.com/s0t7x/shroudtopia/releases).
 2. **Setup:** Extract the files into your Enshrouded game or dedicated server folder.
-3. **Mods Folder:** Create a `mods` folder if it doesn’t exist and place your mod DLLs inside.
-4. **Launch:** Start the server - a default config is generated if `shroudtopia.json` is absent.
+3. **Download Example Mods:** Get latest example mods from the [release section](https://github.com/s0t7x/shroudtopia/releases).
+4. **Mods Folder:** Create a `mods` folder if it doesn’t exist and place your mod DLLs inside.
+5. **Launch:** Start the server - a default config is generated if `shroudtopia.json` is absent.
 
 If Shroudtopia is loaded correctly, you should see something like this in the server console:
 ```
@@ -45,7 +34,6 @@ If Shroudtopia is loaded correctly, you should see something like this in the se
 ```
 
 Upon the first launch, a default configuration file `shroudtopia.json` is created. All mods are deactivated by default, so you must manually activate them by adjusting the configuration.
-
 
 ## Configuration
 
@@ -85,6 +73,19 @@ Each mod exposes its configuration options, which can be altered in `shroudtopia
     "bypass_altar_limit": true
 }
 ```
+
+## Example Mods
+
+- **Flight Mod:** Enjoy full flight capabilities with the glider. No more losing height!
+![Flight Mod](https://github.com/s0t7x/shroudtopia/blob/main/example-mods/flight_mod/demo.gif)
+
+
+- ~~**First Person View:** Play Enshrouded from another persepctive. Example for client-only mod.~~ **As I am focused on development for dedicated servers the First-Person-View Mod has not been updated since a few game versions and is untested!**
+![First Person View](https://github.com/s0t7x/shroudtopia/blob/main/example-mods/first_person_view/demo.gif)
+
+
+- **BasicsMod:** Flight Mod is no fun with fall damage. All other legacy Shroudtopia features have been put into this mod. You can selectively activate them in the configuration file.
+
 
 # Creating Mods
 Mods for Shroudtopia are written as dynamic libraries (DLLs) and need to include `shroudtopia.h` from `./shroudtopia/`.

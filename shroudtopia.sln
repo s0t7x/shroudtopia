@@ -43,7 +43,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "include", "include", "{167A
 		include\shroudtopia.h = include\shroudtopia.h
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "whitelist_mod", "whitelist_mod\whitelist_mod.vcxproj", "{7420A09A-3786-4AAC-A82B-F796B7209F53}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "whitelist_mod", "example-mods\whitelist_mod\whitelist_mod.vcxproj", "{7420A09A-3786-4AAC-A82B-F796B7209F53}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
