@@ -10,6 +10,15 @@
 
 I'm excited to introduce **Shroudtopia**, a modloader that allows easy management and integration of mods for Enshrouded. With Shroudtopia, you can dynamically load, activate, and deactivate mods without restarting, giving you the ultimate flexibility to enhance gameplay.
 
+## Table of Contents
+- [Modloader Features](#modloader-features)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Example Mods](#example-mods)
+- [Creating Mods](#creating-mods)
+- [Contributing](#contributing)
+- [License](#license)
+
 ## Modloader Features
 
 - **Mod Management**: Dynamically load and unload mods from the "mods" folder.
@@ -78,7 +87,7 @@ Each mod exposes its configuration options, which can be altered in `shroudtopia
 ![Flight Mod](https://github.com/s0t7x/shroudtopia/blob/main/example-mods/flight_mod/demo.gif)
 
 
-- ~~**First Person View:** Play Enshrouded from another persepctive. Example for client-only mod.~~ **As I am focused on development for dedicated servers the First-Person-View Mod has not been updated since a few game versions and is untested!**
+- **First Person View:** Play Enshrouded from another persepctive. Example for client-only mod.
   
 ![First Person View](https://github.com/s0t7x/shroudtopia/blob/main/example-mods/first_person_view/demo.gif)
 
@@ -148,3 +157,4 @@ Special thanks to the following folks. Their work gave me a headstart implementi
 - cfe
 - Turk
 - Atamg
+- ndoa
