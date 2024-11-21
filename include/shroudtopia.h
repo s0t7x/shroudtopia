@@ -32,9 +32,15 @@ struct ModContext {
     } game;
     struct {
         std::function<bool(const char* modKey, const char * key, bool defaultValue)> GetBool;
+        std::function<std::vector<bool>(const char* modKey, const char* key, std::vector<bool> defaultValue)> GetBoolArray;
         std::function<std::string(const char* modKey, const char* key, std::string defaultValue)> GetString;
+        std::function<std::vector<std::string>(const char* modKey, const char* key, std::vector<std::string> defaultValue)> GetStringArray;
         std::function<int(const char* modKey, const char* key, int defaultValue)> GetInt;
+        std::function< std::vector<int>(const char* modKey, const char* key, std::vector<int> defaultValue)> GetIntArray;
         std::function<float(const char* modKey, const char* key, float defaultValue)> GetFloat;
+        std::function<std::vector<float>(const char* modKey, const char* key, std::vector<float> defaultValue)> GetFloatArray;
+        std::function<uint64_t(const char* modKey, const char* key, uint64_t defaultValue)> GetUint64;
+        std::function<std::vector<uint64_t>(const char* modKey, const char* key, std::vector<uint64_t> defaultValue)> GetUint64Array;
     } config;
     struct {
         std::function<bool(LPVOID targetAddress, LPVOID data, SIZE_T size)> WriteToReadOnlyMemory;

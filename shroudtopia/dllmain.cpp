@@ -295,9 +295,15 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
             { "SVN HERE", !onServer, onServer },
             {
                 [](const char* modKey, const char* key, bool defaultValue = false) { return Config::modGet<bool>(modKey, key, defaultValue); },
-                [](const char* modKey, const char* key, const std::string& defaultValue = "") { return Config::modGet<std::string>(modKey, key, defaultValue); },
+                [](const char* modKey, const char* key, std::vector<bool> defaultValue) { return Config::modGet<std::vector<bool>>(modKey, key, defaultValue); },
+                [](const char* modKey, const char* key, std::string defaultValue = "") { return Config::modGet<std::string>(modKey, key, defaultValue); },
+                [](const char* modKey, const char* key, std::vector<std::string> defaultValue = {}) { return Config::modGet<std::vector<std::string>>(modKey, key, defaultValue); },
                 [](const char* modKey, const char* key, int defaultValue = 0) { return Config::modGet<int>(modKey, key, defaultValue); },
-                [](const char* modKey, const char* key, float defaultValue = 0.0f) { return Config::modGet<float>(modKey, key, defaultValue); }
+                [](const char* modKey, const char* key, std::vector<int> defaultValue = {}) { return Config::modGet<std::vector<int>>(modKey, key, defaultValue); },
+                [](const char* modKey, const char* key, float defaultValue = 0.0f) { return Config::modGet<float>(modKey, key, defaultValue); },
+                [](const char* modKey, const char* key, std::vector<float> defaultValue = {}) { return Config::modGet<std::vector<float>>(modKey, key, defaultValue); },
+                [](const char* modKey, const char* key, uint64_t defaultValue = 0) { return Config::modGet<uint64_t>(modKey, key, defaultValue); },
+                [](const char* modKey, const char* key, std::vector<uint64_t> defaultValue = {}) { return Config::modGet<std::vector<uint64_t>>(modKey, key, defaultValue); }
             },
             {
                 ModContext_WriteToReadOnlyMemory,
