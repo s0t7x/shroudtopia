@@ -1,7 +1,5 @@
 <p align="center">
-
-![Shroudtopia](https://github.com/s0t7x/shroudtopia/blob/main/header.gif)
-
+<img alt="Shroudtopia" src="https://github.com/s0t7x/shroudtopia/blob/main/header.gif">
 </p>
 <p align="center">
 <b>Modloader for Enshrouded (Server & Client)</b>
@@ -10,24 +8,7 @@
 <img alt="Static Badge" src="https://img.shields.io/badge/Game%20Version%20(SVN)-606779-blue">
 </p>
 
-<hr/>
-
-<h2>Unstable hotfixes:</h2>
-
-<p align="center">
-<b>This versions are highly unstable as turning any of the outdated mods on will crash the server / client.</b>
-</p>
-
-
-|svn|hotfix|
-|-|-|
-|<img alt="Static Badge" src="https://img.shields.io/badge/Game%20Version%20(SVN)-602428-orange">|<a href="https://github.com/s0t7x/shroudtopia/releases/tag/0.2-hotfix-unstable">https://github.com/s0t7x/shroudtopia/releases/tag/0.2-hotfix-unstable</a>|
-
-
-<hr/>
-
 I'm excited to introduce **Shroudtopia**, a modloader that allows easy management and integration of mods for Enshrouded. With Shroudtopia, you can dynamically load, activate, and deactivate mods without restarting, giving you the ultimate flexibility to enhance gameplay.
-
 
 ## Modloader Features
 
