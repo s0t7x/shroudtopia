@@ -64,10 +64,11 @@ public:
 		{
 			// The modded code that will replace the original instructions at the found address.
 			uint8_t modCode[] = {
-				0x8B, 0x04, 0x81,                   // mov eax, [rcx+rax*4]
-				0x89, 0x44, 0x24, 0x3C,             // mov [rsp+3C], eax
-				0x89, 0x44, 0x24, 0x40,             // mov [rsp+40], eax
-				0xE9, 0x00, 0x00, 0x00, 0x00        // jmp return
+				0xC7, 0x04, 0x81,  0x01, 0x00, 0x00, 0x00,	// mov[rcx + rax * 4],00000001 { 1 }
+				0x8B, 0x04, 0x81,							// mov eax, [rcx+rax*4]
+				0x89, 0x44, 0x24, 0x3C,						// mov [rsp+3C], eax
+				0x89, 0x44, 0x24, 0x40,						// mov [rsp+40], eax
+				0xE9, 0x00, 0x00, 0x00, 0x00				// jmp return
 			};
 
 			// Creating the detour by replacing the original code with our custom modCode.
