@@ -146,7 +146,7 @@ public:
 				0xE9, 0x00, 0x00, 0x00, 0x00
 			};
 
-			mod = new Mem::Detour(address, modCode, sizeof(modCode), false, 1);
+			mod = new Mem::Detour(address, modCode, sizeof(modCode), false, 2);
 
 			// Calculate the jump address for detour
 			mod->shellcode->updateValue<uint32_t>(
