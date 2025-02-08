@@ -15,7 +15,7 @@ ModMetaData metaData = {
 	true,
 };
 
-// Signature for GameVersion (SVN) 602428
+// Signature for GameVersion (SVN) 637515
 class _Mod {
 public:
 	ModContext* modContext;
@@ -64,12 +64,9 @@ public:
 		{
 			// The modded code that will replace the original instructions at the found address.
 			uint8_t modCode[] = {
-				0x53,                               // push rbx
-				0x8B, 0x5C, 0x81, 0x08,             // mov ebx, [rcx+rax*4+8]
-				0x89, 0x5C, 0x81, 0xFC,             // mov [rcx+rax*4-4], ebx
-				0x5B,                               // pop rbx
 				0x8B, 0x04, 0x81,                   // mov eax, [rcx+rax*4]
 				0x89, 0x44, 0x24, 0x3C,             // mov [rsp+3C], eax
+				0x89, 0x44, 0x24, 0x40,             // mov [rsp+40], eax
 				0xE9, 0x00, 0x00, 0x00, 0x00        // jmp return
 			};
 
@@ -92,8 +89,8 @@ public:
 	NoFallDamage(ModContext* modContext) : _Mod(modContext)
 	{
 		// Pattern matching the AOB scan for the original code in the target process.
-		const char* pattern = "\x89\x04\x91\x48\x8D\x4D";
-		const char* mask = "xxxxxx";
+		const char* pattern = "\x89\x04\x91\x48\x8D\x4D\x08";
+		const char* mask = "xxxxxxx";
 
 		// Base address of the module (the game).
 		uintptr_t baseAddress = (uintptr_t)GetModuleHandle(NULL);
@@ -110,8 +107,8 @@ public:
 
 			// no fall damage
 			uint8_t modCode[] = {
-				0x48, 0x83, 0xC0, 0x00,              // add eax, 0 (equivalent to no operation)
-				0x48, 0x8D, 0x4D, 0xE0,              // lea rcx, [rbp-20]
+				0x83, 0xC0, 0x00,					 // add eax, 0 (equivalent to no operation)
+				0x48, 0x8D, 0x4D, 0x08,              // lea rcx, [rbp+08]
 				0xE9, 0x00, 0x00, 0x00, 0x00         // jmp return (dynamic, needs to be calculated)
 			};
 
@@ -135,52 +132,26 @@ public:
 class InfiniteItemUse : public _Mod
 {
 public:
-	Mem::Detour* free_ItemUseMod2 = nullptr;
-
 	InfiniteItemUse(ModContext* modContext) : _Mod(modContext)
 	{
-		// AOB patterns for the original code in the target process.
-		const char* pattern1 = "\x49\x89\x0E\x41\x2B"; // First AOB
-		const char* pattern2 = "\x45\x29\x7E\x04\x41\x2B\xEF"; // Second AOB
-
-		// Base address of the module (the game).
+		const char* pattern = "\x41\x29\x6E\x04";
 		uintptr_t baseAddress = (uintptr_t)GetModuleHandle(NULL);
-
-		// Find the patterns within the game memory (scans within 16MB).
-		uintptr_t address1 = Mem::FindPattern(pattern1, "xxxxx", baseAddress, 0xF0000000);
-		uintptr_t address2 = Mem::FindPattern(pattern2, "xxxxxxx", baseAddress, 0xF0000000);
-
-		// Check if both addresses were found.
-		if (address1 && address2)
+		uintptr_t address = Mem::FindPattern(pattern, "xxxx", baseAddress, 0xF0000000);
+		if (address)
 		{
-			// Allocate memory for new instructions to be injected at address1.
-			uint8_t modCode1[] = {
-				0x41, 0xBF, 0x00, 0x00, 0x00, 0x00, 0xBD, 0x00, 0x00, 0x00, 0x00, 0xE9, 0x00, 0x00, 0x00, 0x00
+			uint8_t modCode[] = {
+				0x41, 0xBF, 0x00, 0x00, 0x00, 0x00, 
+				0xBD, 0x00, 0x00, 0x00, 0x00, 
+				0xE9, 0x00, 0x00, 0x00, 0x00
 			};
 
-			// Creating the detour for the first address.
-			mod = new Mem::Detour(address1, modCode1, sizeof(modCode1), false, 1);
+			mod = new Mem::Detour(address, modCode, sizeof(modCode), false, 1);
 
-			// Calculate the jump address for the first detour.
+			// Calculate the jump address for detour
 			mod->shellcode->updateValue<uint32_t>(
-				sizeof(modCode1) - 4, (uint32_t)(mod->patch->data->address + mod->patch->data->size)
+				sizeof(modCode) - 4, (uint32_t)(mod->patch->data->address + mod->patch->data->size)
 				- ((uint32_t)((uintptr_t)mod->shellcode->data->address
 					+ mod->shellcode->data->size))
-			);
-
-			// Allocate memory for new instructions to be injected at address2.
-			uint8_t modCode2[] = {
-				0x41, 0xBF, 0x00, 0x00, 0x00, 0x00, 0xBD, 0x00, 0x00, 0x00, 0x00, 0xE9, 0x00, 0x00, 0x00, 0x00
-			};
-
-			// Creating the detour for the second address.
-			free_ItemUseMod2 = new Mem::Detour(address2, modCode2, sizeof(modCode2), false, 2);
-
-			// Calculate the jump address for the second detour.
-			free_ItemUseMod2->shellcode->updateValue<uint32_t>(
-				sizeof(modCode2) - 4, (uint32_t)(free_ItemUseMod2->patch->data->address + free_ItemUseMod2->patch->data->size)
-				- ((uint32_t)((uintptr_t)free_ItemUseMod2->shellcode->data->address
-					+ free_ItemUseMod2->shellcode->data->size))
 			);
 		}
 	}
@@ -189,8 +160,7 @@ public:
 	void activate()
 	{
 		mod->activate();
-		free_ItemUseMod2->activate();
-		active = mod->active && free_ItemUseMod2->active;
+		active = mod->active;
 		if (active)
 			LOG_CLASS("Activated");
 		else
@@ -201,7 +171,6 @@ public:
 	void deactivate()
 	{
 		mod->deactivate();
-		free_ItemUseMod2->deactivate();
 		active = false;
 		LOG_CLASS("Deactivated");
 	}

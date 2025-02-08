@@ -39,6 +39,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "funchook-static", "third-pa
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "include", "include", "{167AD0B7-C6A5-4924-965D-0B1ECF4F379A}"
 	ProjectSection(SolutionItems) = preProject
+		include\game_structures.h = include\game_structures.h
 		include\memory_utils.h = include\memory_utils.h
 		include\shroudtopia.h = include\shroudtopia.h
 	EndProjectSection
