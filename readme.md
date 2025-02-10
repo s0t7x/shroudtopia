@@ -27,11 +27,18 @@ I'm excited to introduce **Shroudtopia**, a modloader that allows easy managemen
 
 ## Installation
 
-1. **Download Mod Loader:** Get the latest Shroudtopia binaries from the [release section](https://github.com/s0t7x/shroudtopia/releases).
-2. **Setup:** Extract the files into your Enshrouded game or dedicated server folder.
-3. **Download Example Mods:** Get latest example mods from the [release section](https://github.com/s0t7x/shroudtopia/releases).
-4. **Mods Folder:** Create a `mods` folder if it doesn’t exist and place your mod DLLs inside.
-5. **Launch:** Start the server - a default config is generated if `shroudtopia.json` is absent.
+| **Requirements:**                                             |
+|---------------------------------------------------------------|
+| Microsoft Visual C++ Redistributable ~ [x64 Download](https://aka.ms/vs/17/release/vc_redist.x64.exe). |
+
+### Steps to Install:
+1. **Download the Mod Loader:** Get the latest Shroudtopia binaries from the [release section](https://github.com/s0t7x/shroudtopia/releases).
+2. **Extract the Files:** Extract the contents into your Enshrouded game or dedicated server folder.
+3. **Download Example Mods:** You can download example mods from the [release section](https://github.com/s0t7x/shroudtopia/releases).
+4. **Create Mods Folder:** If it doesn’t already exist, create a `mods` folder and place your mod DLLs inside.
+5. **Launch the Server:** Start the server. A default config (`shroudtopia.json`) will be generated if it's absent.
+
+Once set up, you're ready to start using Shroudtopia to manage your mods.
 
 On servers: If Shroudtopia is loaded correctly, you should see something like this in the server console:
 ```
