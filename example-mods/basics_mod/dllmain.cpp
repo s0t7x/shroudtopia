@@ -177,30 +177,26 @@ public:
 	}
 };
 
-// Unpatched
-class NoCraftCost : public _Mod
+class NoResourceCost : public _Mod
 {
 public:
-	NoCraftCost(ModContext* modContext) : _Mod(modContext)
+	NoResourceCost(ModContext* modContext) : _Mod(modContext)
 	{
 		// Pattern matching the AOB scan for the original code in the target process.
-		const char* pattern = "\x43\x8B\x74\xF5\x04";
-		const char* mask = "xxxxx";
+		const char* pattern = "\x48\x89\x5C\x24\x08\x48\x89\x74\x24\x18\x48\x89\x7C\x24\x20\x55\x41\x54\x41\x55\x41\x56\x41\x57\x48\x8D\xAC\x24\x70\xFF\xFF\xFF\x48\x81\xEC\x90\x01\x00\x00\x44\x8B\xBD\xE8\x00\x00\x00\x4C\x8B\xE1\x48\x8B\x0A\x41\x8B\xF9\x48\x8B\x5A\x10\x41\x8B\xF0\x4C\x8B\xEA\x48\x8B\x09";
+		const char* mask = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
 
 		// Base address of the module (the game).
 		uintptr_t baseAddress = (uintptr_t)GetModuleHandle(NULL);
 
-		// Find the pattern within the game memory (scans within 16MB).
-		uintptr_t address = Mem::FindPattern(pattern, mask, baseAddress, 0x1000000);
-
-		// If the address was found, proceed with allocating memory and creating the detour.
+		uintptr_t address = Mem::FindPattern(pattern, mask, baseAddress, 0x10000000);
 		if (address)
 		{
-			// The modded code that will replace the original instructions at the found address.
+			// no fall damage
 			uint8_t modCode[] = {
-				0x43, 0x8B, 0x74, 0xF5, 0x04, // - mov esi,[r13 + r14 * 8 + 04]
-				0xBE, 0x00, 0x00, 0x00, 0x00, // - mov esi,00000000
-				0xE9, 0x00, 0x00, 0x00, 0x00  // - jmp
+				0xC7, 0x44, 0x24, 0x30, 0x00, 0x00, 0x00, 0x00,	// - mov[rsp + 30],00000000
+				0x48, 0x89, 0x5C, 0x24, 0x08,					// - mov[rsp + 08],rbx
+				0xE9, 0x00, 0x00, 0x00, 0x00					// - jmp return
 			};
 
 			// Creating the detour by replacing the original code with our custom modCode.
@@ -213,130 +209,143 @@ public:
 					+ mod->shellcode->data->size))
 			);
 		}
+		else
+		{
+			LOG_CLASS(std::string("Address not found: Base Address: ").append(std::to_string(baseAddress)).c_str());
+		}
 	}
 };
-// BROKEN! Actually does opposite of what it should... :(
-class BypassWorldBorders : public _Mod
+
+class UnlockBlueprints : public _Mod
 {
 public:
-	BypassWorldBorders(ModContext* modContext) : _Mod(modContext)
+	UnlockBlueprints(ModContext* modContext) : _Mod(modContext)
 	{
-		// AOB pattern for the original code in the target process.
-		const char* pattern = "\x89\x88\x00\x00\x00\x0F\x10\x00\xF2\x0F\x10\x48\x10"; // Unique AOB
+		if (modContext->game.isServer) return;
+		// Pattern matching the AOB scan for the original code in the target process.
+		const char* pattern = "\xC9\x74\x5E\x44\x8B\x1A\x48\x8D\x43\xFF";
+		const char* mask = "xxxxxxxxxx";
 
 		// Base address of the module (the game).
 		uintptr_t baseAddress = (uintptr_t)GetModuleHandle(NULL);
 
-		// Find the pattern within the game memory (scans within 16MB).
-		uintptr_t address = Mem::FindPattern(pattern, "xxxxxxxxxxxxx", baseAddress, 0xF000000);
-
-		// Check if the address was found.
+		uintptr_t address = Mem::FindPattern(pattern, mask, baseAddress, 0x10000000);
 		if (address)
 		{
-			// BROKEN! Actually does opposite of what it should... :(
+			// no fall damage
 			uint8_t modCode[] = {
-				0xF3, 0x0F, 0x10, 0x05, 0x00, 0x00, 0x00, 0x00, // movups xmm0, [_P]
-				0xF2, 0x0F, 0x10, 0x48, 0x10,                   // movsd xmm1, [_P + 10]
-				0xE9, 0x00, 0x00, 0x00, 0x00                    // jmp return (dynamic, needs to be calculated)
+				0x41,0xBB,0x82,0x53,0x2B,0x54,	// - mov r11d,542B5382
+				0x48,0x8D,0x43,0xFF,			// - lea rax,[rbx - 01]
+				0xE9,0x27,0x9F,0x89,0x00		// - jmp enshrouded.exe + 879F36
+
 			};
 
-			// Creating the detour for the AOB address.
-			mod = new Mem::Detour(address + 5, modCode, sizeof(modCode), false, 3);
+			// Creating the detour by replacing the original code with our custom modCode.
+			mod = new Mem::Detour(address + 3, modCode, sizeof(modCode), false, 2);
 
-			// Calculate the jump address for the detour.
+			// Calculate the jump address and update the shellcode.
 			mod->shellcode->updateValue<uint32_t>(
 				sizeof(modCode) - 4, (uint32_t)(mod->patch->data->address + mod->patch->data->size)
 				- ((uint32_t)((uintptr_t)mod->shellcode->data->address
 					+ mod->shellcode->data->size))
 			);
 		}
+		else
+		{
+			LOG_CLASS(std::string("Address not found: Base Address: ").append(std::to_string(baseAddress)).c_str());
+		}
 	}
 
-	// Activates the Bypass World Borders mod.
 	void activate()
 	{
+		if (modContext->game.isServer) {
+			LOG_CLASS("Cannot activate on server");
+			return;
+		}
 		mod->activate();
 		active = mod->active;
 		if (active)
-			LOG_CLASS("Activated BypassWorldBorders");
+			LOG_CLASS("Activated");
 		else
-			LOG_CLASS("Failed to activate BypassWorldBorders");
+			LOG_CLASS("Failed to activate");
 	}
 
-	// Deactivates the Bypass World Borders mod.
-	void deactivate()
-	{
-		mod->deactivate();
-		active = false;
-		LOG_CLASS("Deactivated BypassWorldBorders");
-	}
 };
-// Unpatched
-class BypassAltarLimit : public _Mod
+
+class InfItemSplit : public _Mod
 {
 public:
-	BypassAltarLimit(ModContext* modContext) : _Mod(modContext)
+	InfItemSplit(ModContext* modContext) : _Mod(modContext)
 	{
-		// AOB pattern for the original code in the target process.
-		const char* pattern = "\x49\x8B\x8E\xD0\x00\x00\x00\x3B"; // Unique AOB
+		// Pattern matching the AOB scan for the original code in the target process.
+		const char* pattern = "\x29\x6E\x04\xEB\xC5";
+		const char* mask = "xxxxx";
+
+		const char* handlingPattern = "\x0F\x10\x44\x24\x28\xC6\x07\x00";
+		const char* handlingMask = "xxxxxxxx";
 
 		// Base address of the module (the game).
 		uintptr_t baseAddress = (uintptr_t)GetModuleHandle(NULL);
 
-		// Find the pattern within the game memory (scans within 16MB).
-		uintptr_t address = Mem::FindPattern(pattern, "xxxxxxxx", baseAddress, 0x1000000);
-
-		// Check if the address was found.
-		if (address)
+		uintptr_t address = Mem::FindPattern(pattern, mask, baseAddress, 0x10000000);
+		uintptr_t handlingAddress = Mem::FindPattern(handlingPattern, handlingMask, baseAddress, 0x10000000);
+		if (address && handlingAddress)
 		{
-			// Allocate memory for new instructions to be injected.
 			uint8_t modCode[] = {
-				0x49, 0x8B, 0x8E, 0xD0, 0x00, 0x00, 0x00, // mov rcx, [r14 + 0xD0]
-				0xB8, 0xFF, 0x00, 0x00, 0x00, // mov eax, 0xFF
-				0xE9, 0x00, 0x00, 0x00, 0x00 // jmp return (dynamic, needs to be calculated)
+				0x83, 0x6E, 0x04, 0x00,			// - sub dword ptr[rsi + 04],00
+				0xE9, 0xCA, 0x75, 0x71, 0x00,	// - jmp ItemHandling
+				0xE9, 0x00, 0x76, 0x71, 0x00	// - jmp enshrouded_server.exe + 70760E
 			};
 
-			// Creating the detour for the AOB address.
-			mod = new Mem::Detour(address, modCode, sizeof(modCode), false, 2);
+			// Creating the detour by replacing the original code with our custom modCode.
+			mod = new Mem::Detour(address, modCode, sizeof(modCode), false, 1);
 
-			// Calculate the jump address for the detour.
+			mod->shellcode->updateValue<uint32_t>(
+				sizeof(modCode) - 9,
+				(uint32_t)(handlingAddress - ((uintptr_t)mod->shellcode->data->address
+					+ mod->shellcode->data->size))
+			);
+
 			mod->shellcode->updateValue<uint32_t>(
 				sizeof(modCode) - 4, (uint32_t)(mod->patch->data->address + mod->patch->data->size)
 				- ((uint32_t)((uintptr_t)mod->shellcode->data->address
 					+ mod->shellcode->data->size))
 			);
 		}
+		else
+		{
+			LOG_CLASS(std::string("Address not found: Base Address: ").append(std::to_string(baseAddress)).c_str());
+		}
 	}
 };
-
 
 class BasicsMod : public Mod
 {
 	NoStaminaLoss* noStaminaLoss;
 	NoFallDamage* noFallDamage;
-	NoCraftCost* noCraftCost;
 	InfiniteItemUse* infiniteItemUse;
-	BypassWorldBorders* bypassWorldBorders;
-	BypassAltarLimit* bypassAltarLimit;
+	NoResourceCost* noResourceCost;
+	UnlockBlueprints* unlockBlueprints;
+	InfItemSplit* infItemSplit;
 
 public:
 	void Load(ModContext* modContext)
 	{
 		noStaminaLoss = new NoStaminaLoss(modContext);
 		noFallDamage = new NoFallDamage(modContext);
-		noCraftCost = new NoCraftCost(modContext);
+		noResourceCost = new NoResourceCost(modContext);
 		infiniteItemUse = new InfiniteItemUse(modContext);
-		bypassWorldBorders = new BypassWorldBorders(modContext);
-		bypassAltarLimit = new BypassAltarLimit(modContext);
+		unlockBlueprints = new UnlockBlueprints(modContext);
+		infItemSplit = new InfItemSplit(modContext);
 	}
 
 	void Unload(ModContext* modContext) {
 		delete noStaminaLoss;
 		delete noFallDamage;
-		delete noCraftCost;
+		delete noResourceCost;
 		delete infiniteItemUse;
-		delete bypassWorldBorders;
-		delete bypassAltarLimit;
+		delete unlockBlueprints;
+		delete infItemSplit;
 	}
 
 	void Activate(ModContext* modContext) {
@@ -347,10 +356,10 @@ public:
 	void Deactivate(ModContext* modContext) {
 		if (noStaminaLoss->active) noStaminaLoss->deactivate();
 		if (noFallDamage->active) noFallDamage->deactivate();
-		if (noCraftCost->active) noCraftCost->deactivate();
+		if (noResourceCost->active) noResourceCost->deactivate();
 		if (infiniteItemUse->active) infiniteItemUse->deactivate();
-		if (bypassWorldBorders->active) bypassWorldBorders->deactivate();
-		if (bypassAltarLimit->active) bypassAltarLimit->deactivate();
+		if (unlockBlueprints->active) unlockBlueprints->deactivate();
+		if (infItemSplit->active) infItemSplit->deactivate();
 		active = false;
 		modContext->Log(std::string().append(metaData.name).append(" deactivated").c_str());
 	}
@@ -376,24 +385,27 @@ public:
 		else if (!infiniteItemUseEnabled && infiniteItemUse->active)
 			infiniteItemUse->deactivate();
 
-	//	// Unpatched
-	/*	bool noCraftCostEnabled = modContext->config.GetBool(modKey, "no_craft_cost", false);
-		if (noCraftCostEnabled && !noCraftCost->active)
-			noCraftCost->activate();
-		else if (!noCraftCostEnabled && noCraftCost->active)
-			noCraftCost->deactivate();
+		bool noResourceCostEnabled = modContext->config.GetBool(modKey, "no_resource_cost", false);
+		if (noResourceCostEnabled && !noResourceCost->active)
+			noResourceCost->activate();
+		else if (!noResourceCostEnabled && noResourceCost->active)
+			noResourceCost->deactivate();
 
-		bool bypassWorldBordersEnabled = modContext->config.GetBool(modKey, "bypass_world_borders", false);
-		if (bypassWorldBordersEnabled && !bypassWorldBorders->active)
-			bypassWorldBorders->activate();
-		else if (!bypassWorldBordersEnabled && bypassWorldBorders->active)
-			bypassWorldBorders->deactivate();
 
-		bool bypassAltarLimitEnabled = modContext->config.GetBool(modKey, "bypass_altar_limit", false);
-		if (bypassAltarLimitEnabled && !bypassAltarLimit->active)
-			bypassAltarLimit->activate();
-		else if (!bypassAltarLimitEnabled && bypassAltarLimit->active)
-			bypassAltarLimit->deactivate();*/
+		if(modContext->game.isClient) {
+			bool unlockBlueprintsEnabled = modContext->config.GetBool(modKey, "unlock_blueprints", false);
+			if (unlockBlueprintsEnabled && !unlockBlueprints->active)
+				unlockBlueprints->activate();
+			else if (!unlockBlueprintsEnabled && unlockBlueprints->active)
+				unlockBlueprints->deactivate();
+		}
+
+
+		bool infItemSplitEnabled = modContext->config.GetBool(modKey, "inf_item_split", false);
+		if (infItemSplitEnabled && !infItemSplit->active)
+			infItemSplit->activate();
+		else if (!infItemSplitEnabled && infItemSplit->active)
+			infItemSplit->deactivate();
 	}
 
 	ModMetaData GetMetaData() {

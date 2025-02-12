@@ -1,9 +1,33 @@
 #pragma once
 #include <windows.h>
 #include <iostream>
+#include <iomanip>
 
 namespace Mem
 {
+    void hex_dump(const void* data, size_t size) {
+        const unsigned char* bytes = static_cast<const unsigned char*>(data);
+        for (size_t i = 0; i < size; ++i) {
+            std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)bytes[i] << " ";
+            if ((i + 1) % 16 == 0) {
+                std::cout << std::endl;
+            }
+        }
+        std::cout << std::endl;
+    }
+
+    bool isMemoryReadable(const void* address) {
+        MEMORY_BASIC_INFORMATION mbi;
+        SIZE_T result = VirtualQuery(address, &mbi, sizeof(mbi));
+
+        if (result == 0) {
+            std::cerr << "VirtualQuery failed: " << GetLastError() << std::endl;
+            return false;
+        }
+
+        return (mbi.State == MEM_COMMIT) &&
+            (mbi.Protect & (PAGE_READONLY | PAGE_READWRITE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE));
+    }
 
     bool WriteToReadOnlyMemory(LPVOID targetAddress, LPVOID data, SIZE_T size)
     {
