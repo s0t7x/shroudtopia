@@ -80,11 +80,15 @@ Each mod can be enabled or customized via the `shroudtopia.json` config file. He
             "active": true,
             "no_stamina_loss": true,
             "no_fall_damage": true,
-            "no_craft_cost": true,
+            "no_resource_cost": true,
             "inf_item_use": true,
-            "bypass_altar_limit": true
+            "unlock_blueprints": true,
+            "inf_item_split": true
         },
         "Flight Mod": {
+            "active": true
+        },
+        "FirstPersonView": {
             "active": true
         }
     },
@@ -92,17 +96,7 @@ Each mod can be enabled or customized via the `shroudtopia.json` config file. He
 }
 ```
 
-Mods expose their configuration options, which can be altered in `shroudtopia.json`. For instance, to enable or disable specific features for the basics mod:
-```json
-"basics": {
-    "active": true,
-    "no_stamina_loss": true,
-    "no_fall_damage": false,
-    "no_craft_cost": true,
-    "inf_item_use": true,
-    "bypass_altar_limit": true
-}
-```
+Mods are free to expose configuration options.
 
 ## Roadmap
 
@@ -114,6 +108,19 @@ Mods expose their configuration options, which can be altered in `shroudtopia.js
 
 ### Basics Mod
 Some may have no fun with fall damage. Others may just want to have kind of a creative mode. You can selectively activate essential basic mods in the configuration file.
+
+Configuration options:
+```json
+"basics": {
+    "active": true,
+    "no_stamina_loss": true,
+    "no_fall_damage": true,
+    "no_resource_cost": true,
+    "inf_item_use": true,
+    "unlock_blueprints": true,
+    "inf_item_split": true
+}
+```
 
 ### Flight Mod
 
@@ -203,7 +210,7 @@ Let's make Enshrouded even more exciting with **Shroudtopia**! 🌟
 
 Special thanks to the following folks. Their work gave me a headstart implementing most features:
 
-- cfe
+- cfemen
 - Turk
 - Atamg
 - ndoa
