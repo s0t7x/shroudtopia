@@ -204,6 +204,9 @@ Currently no really game specific functions are implemented in the modContext. T
 # License
 This project is licensed under the [MIT License](https://github.com/s0t7x/shroudtopia/blob/0.1-stable/LICENSE).
 
+<a href="https://www.dmca.com/Protection/Status.aspx?id=f9dcfb4f-6a12-4640-9ae3-e2b3e5ae4c7b&refurl=https%3a%2f%2fgithub.com%2fs0t7x%2fshroudtopia&rlo=true">
+<img alt="Shroudtopia" src="https://github.com/user-attachments/assets/11ab9970-c8b3-4137-99d6-7a9892459d02">
+</a>
 <hr />
 
 Let's make Enshrouded even more exciting with **Shroudtopia**! 🌟
