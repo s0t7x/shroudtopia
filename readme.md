@@ -1,23 +1,41 @@
 <p align="center">
-<img alt="Shroudtopia" src="https://github.com/s0t7x/shroudtopia/blob/main/header.gif">
-</p>
-<p align="center">
-<b>Modloader for Enshrouded (Server & Client)</b>
+<img alt="Shroudtopia" src="https://github.com/s0t7x/shroudtopia/blob/main/logo_crop.png">
 </p>
 <p align="center">
 <img alt="Static Badge" src="https://img.shields.io/badge/Game%20Version%20(SVN)-645934-blue">
+<img alt="Static Badge" src="https://img.shields.io/badge/Core%20Version-0.0.3-blue">
 </p>
+<p align="center">
+<table class="n" border="0" align="center">
+ <tr>
+<td>- <a href="#modloader-features">Modloader Features</a></td>
 
-I'm excited to introduce **Shroudtopia**, a modloader that allows easy management and integration of mods for Enshrouded. With Shroudtopia, you can dynamically load, activate, and deactivate mods without restarting, giving you the ultimate flexibility to enhance gameplay.
+ </tr>
+ <tr>
+<td>- <a href="#installation">Installation</a></td>
 
-## Table of Contents
-- [Modloader Features](#modloader-features)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Example Mods](#example-mods)
-- [Creating Mods](#creating-mods)
-- [Contributing](#contributing)
-- [License](#license)
+ </tr>
+ <tr>
+<td>- <a href="#configuration">Configuration</a></td>
+
+ </tr>
+ <tr>
+<td>- <a href="#roadmap">Roadmap</a></td>
+ </tr>
+ <tr>
+<td>- <a href="#example-mods">Example Mods</a></td>
+ </tr>
+     <tr>
+<td>- <a href="#creating-mods">Creating Mods</a></td>
+ </tr>
+     <tr>
+     <td>- <a href="#contributing">Contributing</a></td>
+ </tr>
+     <tr>
+     <td>- <a href="#license">License</a></td>
+ </tr>
+</table>
+</p>
 
 ## Modloader Features
 
@@ -27,9 +45,8 @@ I'm excited to introduce **Shroudtopia**, a modloader that allows easy managemen
 
 ## Installation
 
-| **Requirements:**                                             |
-|---------------------------------------------------------------|
-| Microsoft Visual C++ Redistributable ~ [x64 Download](https://aka.ms/vs/17/release/vc_redist.x64.exe). |
+### Requirements
+- [Microsoft Visual C++ Redistributable x64](https://aka.ms/vs/17/release/vc_redist.x64.exe)
 
 ### Steps to Install:
 1. **Download the Mod Loader:** Get the latest Shroudtopia binaries from the [release section](https://github.com/s0t7x/shroudtopia/releases).
@@ -46,7 +63,7 @@ On servers: If Shroudtopia is loaded correctly, you should see something like th
 [shroudtopia][INFO] Wait before injection. Configured boot delay is 3000ms.
 ```
 
-Upon the first launch, a default configuration file `shroudtopia.json` is created. All mods are deactivated by default, so you must manually activate them by adjusting the configuration.
+Upon the first launch, a default configuration file `shroudtopia.json` is created. For mods you must manually adjust the configuration to their needs.
 
 ## Configuration
 
@@ -63,11 +80,15 @@ Each mod can be enabled or customized via the `shroudtopia.json` config file. He
             "active": true,
             "no_stamina_loss": true,
             "no_fall_damage": true,
-            "no_craft_cost": true,
+            "no_resource_cost": true,
             "inf_item_use": true,
-            "bypass_altar_limit": true
+            "unlock_blueprints": true,
+            "inf_item_split": true
         },
         "Flight Mod": {
+            "active": true
+        },
+        "FirstPersonView": {
             "active": true
         }
     },
@@ -75,32 +96,61 @@ Each mod can be enabled or customized via the `shroudtopia.json` config file. He
 }
 ```
 
-Each mod exposes its configuration options, which can be altered in `shroudtopia.json`. For instance, to enable or disable specific features for the basics mod:
+Mods are free to expose configuration options.
+
+## Roadmap
+
+<p align="center">
+<img alt="Flight Mod" src="https://github.com/s0t7x/shroudtopia/blob/main/roadmap_2025.png">
+</p>
+
+## Example Mods
+
+### Basics Mod
+Some may have no fun with fall damage. Others may just want to have kind of a creative mode. You can selectively activate essential basic mods in the configuration file.
+
+Configuration options:
 ```json
 "basics": {
     "active": true,
     "no_stamina_loss": true,
-    "no_fall_damage": false,
-    "no_craft_cost": true,
+    "no_fall_damage": true,
+    "no_resource_cost": true,
     "inf_item_use": true,
-    "bypass_altar_limit": true
+    "unlock_blueprints": true,
+    "inf_item_split": true
 }
 ```
 
-## Example Mods
+### Flight Mod
 
-- **Flight Mod:** Enjoy full flight capabilities with the glider. No more losing height!
-  
-![Flight Mod](https://github.com/s0t7x/shroudtopia/blob/main/example-mods/flight_mod/demo.gif)
+<p align="center">
+<img alt="Flight Mod" src="https://github.com/s0t7x/shroudtopia/blob/main/example-mods/flight_mod/demo_crop.gif">
+</p>
+
+Enjoy full flight capabilities with the glider. **No more losing height!**
+
+Configuration options:
+```json
+"Flight Mod": {
+    "active": true
+}
+```
 
 
-- **First Person View:** Play Enshrouded from another persepctive. Example for client-only mod.
-  
-![First Person View](https://github.com/s0t7x/shroudtopia/blob/main/example-mods/first_person_view/demo.gif)
+### First Person View
+Play Enshrouded from **another persepctive**. Example for client-only mod.
 
+<p align="center">
+<img alt="Flight Mod" src="https://github.com/s0t7x/shroudtopia/blob/main/example-mods/first_person_view/demo_crop.gif">
+</p>
 
-- **BasicsMod:** Flight Mod is no fun with fall damage. All other legacy Shroudtopia features have been put into this mod. You can selectively activate them in the configuration file.
-
+Configuration options:
+```json
+"FirstPersionView": {
+    "active": true
+}
+```
 
 # Creating Mods
 Mods for Shroudtopia are written as dynamic libraries (DLLs) and need to include `shroudtopia.h` from `./shroudtopia/`.
@@ -147,7 +197,6 @@ The `ModContext` is passed to each mod and provides access to core functionality
 bool enabled = modContext->config.GetBool("modName", "feature_name", false);
 ```
 
-
 # Contributing
 Currently no really game specific functions are implemented in the modContext. This is first try. Anyways, contributions are welcome! Fork the repository, add improvements, and submit pull requests. I would be happy to see more mods for this around.
 
@@ -155,13 +204,16 @@ Currently no really game specific functions are implemented in the modContext. T
 # License
 This project is licensed under the [MIT License](https://github.com/s0t7x/shroudtopia/blob/0.1-stable/LICENSE).
 
+<a href="https://www.dmca.com/Protection/Status.aspx?id=f9dcfb4f-6a12-4640-9ae3-e2b3e5ae4c7b&refurl=https%3a%2f%2fgithub.com%2fs0t7x%2fshroudtopia&rlo=true">
+<img alt="Shroudtopia" src="https://github.com/user-attachments/assets/11ab9970-c8b3-4137-99d6-7a9892459d02">
+</a>
 <hr />
 
 Let's make Enshrouded even more exciting with **Shroudtopia**! 🌟
 
 Special thanks to the following folks. Their work gave me a headstart implementing most features:
 
-- cfe
+- cfemen
 - Turk
 - Atamg
 - ndoa
