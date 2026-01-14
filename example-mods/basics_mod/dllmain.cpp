@@ -8,14 +8,14 @@
 ModMetaData metaData = {
 	"basics",
 	"Enables legacy shroudtopia mods.",
-	"1.0",
+	"1.1-2026",
 	"s0T7x",
 	"0.0.1",
 	true,
 	true,
 };
 
-// Signature for GameVersion (SVN) 637515
+// Signature for GameVersion (SVN) 874630
 class _Mod {
 public:
 	ModContext* modContext;
@@ -49,36 +49,28 @@ class NoStaminaLoss : public _Mod
 public:
 	NoStaminaLoss(ModContext* modContext) : _Mod(modContext)
 	{
-		// Pattern matching the AOB scan for the original code in the target process.
-		const char* pattern = "\x8B\x04\x81\x89\x44\x24\x3C";
+		// AOB: 8B 04 91 89 44 24 40
+		const char* pattern = "\x8B\x04\x91\x89\x44\x24\x40";
 		const char* mask = "xxxxxxx";
-
-		// Base address of the module (the game).
 		uintptr_t baseAddress = (uintptr_t)GetModuleHandle(NULL);
+		uintptr_t address = Mem::FindPattern(pattern, mask, baseAddress, 0x2000000);
 
-		// Find the pattern within the game memory (scans within 16MB).
-		uintptr_t address = Mem::FindPattern(pattern, mask, baseAddress, 0x1000000);
-
-		// If the address was found, proceed with allocating memory and creating the detour.
 		if (address)
 		{
-			// The modded code that will replace the original instructions at the found address.
 			uint8_t modCode[] = {
-				0xC7, 0x04, 0x81,  0x01, 0x00, 0x00, 0x00,	// mov[rcx + rax * 4],00000001 { 1 }
-				0x8B, 0x04, 0x81,							// mov eax, [rcx+rax*4]
-				0x89, 0x44, 0x24, 0x3C,						// mov [rsp+3C], eax
-				0x89, 0x44, 0x24, 0x40,						// mov [rsp+40], eax
-				0xE9, 0x00, 0x00, 0x00, 0x00				// jmp return
+				0x53,                               // push rbx
+				0x8B, 0x5C, 0x91, 0x08,             // mov ebx, [rcx+rdx*4+08] (Max Stamina)
+				0x89, 0x1C, 0x91,                   // mov [rcx+rdx*4], ebx    (Set Current to Max)
+				0x5B,                               // pop rbx
+				0x8B, 0x04, 0x91,                   // mov eax, [rcx+rdx*4]
+				0x89, 0x44, 0x24, 0x40,             // mov [rsp+40], eax
+				0xE9, 0x00, 0x00, 0x00, 0x00        // jmp return
 			};
 
-			// Creating the detour by replacing the original code with our custom modCode.
 			mod = new Mem::Detour(address, modCode, sizeof(modCode), false, 2);
-
-			// Calculate the jump address and update the shellcode.
 			mod->shellcode->updateValue<uint32_t>(
 				sizeof(modCode) - 4, (uint32_t)(mod->patch->data->address + mod->patch->data->size)
-				- ((uint32_t)((uintptr_t)mod->shellcode->data->address
-					+ mod->shellcode->data->size))
+				- ((uint32_t)((uintptr_t)mod->shellcode->data->address + mod->shellcode->data->size))
 			);
 		}
 	}
@@ -89,43 +81,38 @@ class NoFallDamage : public _Mod
 public:
 	NoFallDamage(ModContext* modContext) : _Mod(modContext)
 	{
-		// Pattern matching the AOB scan for the original code in the target process.
-		const char* pattern = "\x89\x04\x91\x48\x8D\x4D\x08";
+		// We scan for 7 bytes now to make sure we have room for the 5-byte Jump
+		// Original instructions:
+		// 45 89 0C 88    - mov [r8+rcx*4], r9d (4 bytes)
+		// 48 8B CB       - mov rcx, rbx        (3 bytes)
+		// Total: 7 bytes
+		const char* pattern = "\x45\x89\x0C\x88\x48\x8B\xCB";
 		const char* mask = "xxxxxxx";
 
-		// Base address of the module (the game).
 		uintptr_t baseAddress = (uintptr_t)GetModuleHandle(NULL);
-
 		uintptr_t address = Mem::FindPattern(pattern, mask, baseAddress, 0x10000000);
+
 		if (address)
 		{
-			// add fall damage as health
-			//uint8_t modCode[] = {
-			//    0x01, 0x04, 0x91,                    // add[rcx + rdx * 4], eax
-			//    0x48, 0x8D, 0x4D, 0xE0,              // lea rcx, [rbp-20]
-			//    0xE9, 0x00, 0x00, 0x00, 0x00         // jmp return (dynamic, needs to be calculated)
-			//};
-
-			// no fall damage
 			uint8_t modCode[] = {
-				0x83, 0xC0, 0x00,					 // add eax, 0 (equivalent to no operation)
-				0x48, 0x8D, 0x4D, 0x08,              // lea rcx, [rbp+08]
-				0xE9, 0x00, 0x00, 0x00, 0x00         // jmp return (dynamic, needs to be calculated)
+				0x45, 0x01, 0x0C, 0x88,             // add [r8+rcx*4], r9d (Your Cheat)
+				0x48, 0x8B, 0xCB,                   // mov rcx, rbx        (The instruction we had to overwrite)
+				0xE9, 0x00, 0x00, 0x00, 0x00        // jmp return
 			};
 
-			// Creating the detour by replacing the original code with our custom modCode.
+			// We use 2 NOPs because: 
+			// 5 (Jump size) + 2 (NOPs) = 7 (Total bytes overwritten)
 			mod = new Mem::Detour(address, modCode, sizeof(modCode), false, 2);
 
-			// Calculate the jump address and update the shellcode.
+			// Calculate jump back to address + 7
 			mod->shellcode->updateValue<uint32_t>(
-				sizeof(modCode) - 4, (uint32_t)(mod->patch->data->address + mod->patch->data->size)
-				- ((uint32_t)((uintptr_t)mod->shellcode->data->address
-					+ mod->shellcode->data->size))
+				sizeof(modCode) - 4,
+				(uint32_t)(address + 7) - ((uint32_t)((uintptr_t)mod->shellcode->data->address + sizeof(modCode)))
 			);
 		}
 		else
 		{
-			LOG_CLASS(std::string("Address not found: Base Address: ").append(std::to_string(baseAddress)).c_str());
+			LOG_CLASS(" NoFallDamage: Pattern not found!");
 		}
 	}
 };
@@ -379,13 +366,13 @@ public:
 			noFallDamage->deactivate();
 
 
-		bool infiniteItemUseEnabled = modContext->config.GetBool(modKey, "inf_item_use", false);
+		bool infiniteItemUseEnabled = modContext->config.GetBool(modKey, "_inf_item_use", false);
 		if (infiniteItemUseEnabled && !infiniteItemUse->active)
 			infiniteItemUse->activate();
 		else if (!infiniteItemUseEnabled && infiniteItemUse->active)
 			infiniteItemUse->deactivate();
 
-		bool noResourceCostEnabled = modContext->config.GetBool(modKey, "no_resource_cost", false);
+		bool noResourceCostEnabled = modContext->config.GetBool(modKey, "_no_resource_cost", false);
 		if (noResourceCostEnabled && !noResourceCost->active)
 			noResourceCost->activate();
 		else if (!noResourceCostEnabled && noResourceCost->active)
@@ -393,7 +380,7 @@ public:
 
 
 		if(modContext->game.isClient) {
-			bool unlockBlueprintsEnabled = modContext->config.GetBool(modKey, "unlock_blueprints", false);
+			bool unlockBlueprintsEnabled = modContext->config.GetBool(modKey, "_unlock_blueprints", false);
 			if (unlockBlueprintsEnabled && !unlockBlueprints->active)
 				unlockBlueprints->activate();
 			else if (!unlockBlueprintsEnabled && unlockBlueprints->active)
@@ -401,7 +388,7 @@ public:
 		}
 
 
-		bool infItemSplitEnabled = modContext->config.GetBool(modKey, "inf_item_split", false);
+		bool infItemSplitEnabled = modContext->config.GetBool(modKey, "_inf_item_split", false);
 		if (infItemSplitEnabled && !infItemSplit->active)
 			infItemSplit->activate();
 		else if (!infItemSplitEnabled && infItemSplit->active)
