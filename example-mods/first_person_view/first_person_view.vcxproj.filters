@@ -15,6 +15,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="camera_patch.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
     <ClInclude Include="pch.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
