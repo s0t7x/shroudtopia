@@ -31,6 +31,8 @@ namespace
     }
 }
 
+#include "stamina_test.h"
+
 int main()
 {
     using namespace FirstPerson;
@@ -208,5 +210,6 @@ int main()
     unsupported.Unload(&context);
     unsupported.Unload(&context);
     Check(!unsupported.active, "missing hook survives activate, deactivate, repeated unload");
+    TestStaminaHud(image);
     return 0;
 }

@@ -3,11 +3,12 @@
 #include <shroudtopia.h>
 #include <memory_utils.h>
 #include "camera_patch.h"
+#include "stamina_patch.h"
 
 ModMetaData metaData = {
     "FirstPersonView",
     "Enables simple but immersive 1st Person view. (Client only)",
-    "1.1.0",
+    "1.1.1",
     "s0T7x",
     "0.1.1",
     true,
@@ -16,6 +17,14 @@ ModMetaData metaData = {
 
 namespace FirstPerson
 {
+    // Released loaders interpret log messages as printf formats. Avoid bare percent signs.
+    void ReportStaminaHudStatus(ModContext* context, bool prepared)
+    {
+        context->Log(prepared ?
+            "[FirstPerson] stamina HUD anchor prepared at 45 percent width, 50 percent height" :
+            "[FirstPerson] stamina HUD layout unsupported; native placement retained");
+    }
+
     float ReadCameraDistance(ModContext* context, float previous)
     {
         if (context == nullptr || !context->config.GetFloat)
@@ -50,6 +59,7 @@ namespace FirstPerson
 class FirstPersonMod : public Mod
 {
     Mem::Detour* mod = nullptr;
+    FirstPerson::StaminaHudHook staminaHud;
     bool unavailableLogged = false;
     bool configurableDistance = false;
     float cameraDistance = FirstPerson::FirstPersonDistance;
@@ -69,6 +79,7 @@ class FirstPersonMod : public Mod
 
     void ReleaseHook()
     {
+        staminaHud.Release();
         if (mod == nullptr)
             return;
         mod->deactivate();
@@ -120,6 +131,7 @@ public:
             configurableDistance = true;
             RefreshCameraDistance(modContext);
             modContext->Log("[FirstPerson] camera hook prepared for client 1076226; minimap entry preserved");
+            FirstPerson::ReportStaminaHudStatus(modContext, staminaHud.Prepare(image));
         }
         else
         {
@@ -167,6 +179,7 @@ public:
             return;
         RefreshCameraDistance(modContext);
         active = mod->activate();
+        staminaHud.SetEnabled(active);
         if (active)
         {
             FlushInstructionCache(GetCurrentProcess(), nullptr, 0);
@@ -178,6 +191,7 @@ public:
 
     void Deactivate(ModContext* modContext) override
     {
+        staminaHud.SetEnabled(false);
         if (mod != nullptr)
         {
             mod->deactivate();

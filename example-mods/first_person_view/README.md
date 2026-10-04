@@ -50,6 +50,27 @@ calculation. Pivot height, FOV and orientation stay under the game's control.
 The minimap hooks the system entry. This mod patches the separate interior call,
 so the two hooks can coexist. An already modified call site is rejected.
 
+## First-person stamina HUD
+
+On the supported current client, the complete stamina gauge stays at 45% of the HUD
+canvas width and 50% of its height while FirstPersonView is active. Its size,
+colours, animation and stamina values retain the game's behaviour. Switching
+back to third person restores the native position. Canvas dimensions are read
+on each draw, so the anchor follows resolution and UI-scale changes.
+
+The signature-checked hook runs at RVA 0xAA6244, after the projected layout
+calculation and before the shared stamina widget scope is created. It anchors
+that parent rectangle in XMM6, so the background, rings, labels and clipping
+consume the same layout. The circle renderer is unchanged. The hook preserves
+other live registers and flags and replays the original scope call. Camera-mode
+changes update one aligned flag without rewriting HUD
+instructions. Missing contexts, minimized canvases or invalid dimensions retain
+the original rectangle. If the HUD signatures do not match, the camera mod still
+works and logs that native HUD placement was retained.
+
+The player confirmed in-game placement and a visible fill while sprinting and
+turning, plus switching between first- and third-person modes, on 4 October 2026.
+
 ## Build and verification
 
 Build with Visual Studio 2022 C++ tools and a Windows SDK. From the repository root
@@ -61,14 +82,17 @@ MSBuild example-mods\first_person_view\tests\camera_test.vcxproj /p:Configuratio
 .\example-mods\first_person_view\build\tests\camera_test.exe
 ```
 
-Release x64 builds and all 32 focused checks passed with MSVC v143 and Windows
+Release x64 builds and all 57 focused checks passed with MSVC v143 and Windows
 SDK 10.0.26100.0. The checks execute the detour in an isolated process with
 synthetic camera data. They cover layout rejection, minimap hook coexistence,
 camera-field preservation, original-call restoration, missing-hook lifecycle,
 config validation and live distance changes. A concurrency check runs 100,000
-camera calls while changing distance 20,000 times.
+camera calls while changing distance 20,000 times. The additional stamina tests
+exercise compatibility with Shroudtopia's startup logger, the real interior
+shared-layout hook, original scope call, register and flag preservation, resolution
+changes, missing/invalid UI data, and 100,000 draws during 20,000 mode toggles.
 
 First-person gameplay and live distance adjustment have also been confirmed on
-the tested Steam client. Synthetic tests do not establish graphics-driver or
-long-session stability. HUD placement is unchanged: a player has reported the
-stamina gauge appearing near the top-left in first person.
+the tested Steam client. The earlier camera fix was reported stable across
+eight-hour sessions without crashes. The new stamina anchor has gameplay
+acceptance; it has not independently undergone an eight-hour session.

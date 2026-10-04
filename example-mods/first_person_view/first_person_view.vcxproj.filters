@@ -15,6 +15,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="stamina_patch.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
     <ClInclude Include="camera_patch.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>

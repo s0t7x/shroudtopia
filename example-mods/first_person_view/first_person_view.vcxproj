@@ -151,6 +151,7 @@
   <ItemGroup>
     <ClInclude Include="pch.h" />
     <ClInclude Include="camera_patch.h" />
+    <ClInclude Include="stamina_patch.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />
